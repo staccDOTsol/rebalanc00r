@@ -13,17 +13,11 @@ This example uses a Switchboard Service to respond to randomness requests on-cha
 
 ## Programs
 
-## Switchboard
-
-We'll be using a modified Switchboard Attestation program deployed at `FXUv1NMyzr11hG5kCpaWp6WiHJr5qvkVFcsnB7vjcFix`.
-
-### Randomness Service
-
-This program is responsible for receiving and settling randomness requests. Any program may invoke the randomness service and request N bytes of randomness. Each request emits an anchor event and creates a request account. Upon settlement, the request account is closed indicating the randomness was received.
-
-### Randomness Consumer
-
-This is an example program of a randomness consumer which will invoke the randomness service and log the received randomness bytes.
+| Program             | Description                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Switchboard         | `FXUv1NMyzr11hG5kCpaWp6WiHJr5qvkVFcsnB7vjcFix` <br />We'll be using a modified Switchboard Attestation program                                                                                                                                                                                                                                                            |
+| Randomness Service  | `RANDa4nas8AqeYP7LXGu6VSSZqqHYQv5vW6P82peWsP` <br />This program is responsible for receiving and settling randomness requests. Any program may invoke the randomness service and request N bytes of randomness. Each request emits an anchor event and creates a request account. Upon settlement, the request account is closed indicating the randomness was received. |
+| Randomness Consumer | `F2kR2Es3YgFkX1rReUDneVxv1bp2UZJWrpEGBXvdfKyg` <br />This is an example program of a randomness consumer which will invoke the randomness service and log the received randomness bytes.                                                                                                                                                                                  |
 
 ## Setup
 
