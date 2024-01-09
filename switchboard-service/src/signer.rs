@@ -70,7 +70,8 @@ impl SecureSigner {
     }
 
     async fn get_ipfs_hash(&self, signer_pubkey: Pubkey) -> Result<Vec<u8>, SbError> {
-        let quote = Gramine::generate_quote(&signer_pubkey.to_bytes())?;
+        let quote = blocking_retry!(10, 1000, Gramine::generate_quote(&signer_pubkey.to_bytes()))?;
+        // let quote = Gramine::generate_quote(&signer_pubkey.to_bytes())?;
         let cursor = std::io::Cursor::new(quote);
 
         let ipfs = IpfsManager::from_env()?;
