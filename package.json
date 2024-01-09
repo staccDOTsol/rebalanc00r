@@ -1,0 +1,73 @@
+{
+  "name": "solana-randomness-service",
+  "private": true,
+  "scripts": {
+    "docker:build": "docker buildx build -f Dockerfile --platform linux/amd64 --pull --load ./",
+    "docker:publish": "VERSION=$(cat ./version) && echo \"Building gallynaut/solana-randomness-service:dev-$VERSION ...\" && docker buildx build -f Dockerfile --platform linux/amd64 --tag gallynaut/solana-randomness-service:dev-$VERSION --pull --push ./ && echo \"Published gallynaut/solana-randomness-service:dev-$VERSION\"",
+    "docker:publish:latest": "echo \"Building gallynaut/solana-randomness-service:latest ...\" && docker buildx build -f Dockerfile --platform linux/amd64 --tag gallynaut/solana-randomness-service:latest --pull --push ./ && echo \"Published gallynaut/solana-randomness-service:latest\"",
+    "preinstall": "npx only-allow pnpm && pnpm sort-package-json",
+    "postinstall": "husky install",
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
+    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w"
+  },
+  "commitlint": {
+    "extends": [
+      "./node_modules/@commitlint/config-conventional"
+    ]
+  },
+  "lint-staged": {
+    "**/*.{js,ts,jsx,tsx}": [
+      "eslint --fix",
+      "prettier --write -u"
+    ],
+    "*/*.{css,less,scss,html,json,md,toml,yaml,yml}": [
+      "prettier --write -u"
+    ],
+    "*.sol": [
+      "solhint --config \"./.solhint.json\" \"chains/evm/**/{src,test}/**/*.sol\""
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/@commitlint/cz-commitlint"
+    }
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@switchboard-xyz/common": "^2.3.15",
+    "@switchboard-xyz/solana.js": "3.2.0-beta.3"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.6.6",
+    "@commitlint/config-conventional": "^17.6.6",
+    "@commitlint/cz-commitlint": "^17.5.0",
+    "@switchboard-xyz/eslint-config": "^0.1.9",
+    "@types/bn.js": "^5.1.0",
+    "@types/chai": "^4.3.5",
+    "@types/mocha": "^10.0.1",
+    "chai": "^4.3.4",
+    "chalk": "4",
+    "commitizen": "^4.3.0",
+    "commitlint": "^17.6.6",
+    "cz-conventional-changelog": "^3.3.0",
+    "dotenv": "^16.3.1",
+    "eslint": "^8.46.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "git-cz": "^4.9.0",
+    "husky": "^8.0.3",
+    "inquirer": "8",
+    "lint-staged": "^13.2.3",
+    "mocha": "^10.2.0",
+    "prettier": "^2.6.2",
+    "sort-package-json": "latest",
+    "ts-mocha": "^10.0.0",
+    "tsx": "^4.6.2",
+    "typescript": "^4.3.5"
+  },
+  "packageManager": "pnpm@8.6.0",
+  "engines": {
+    "node": ">= 18",
+    "pnpm": ">= 7"
+  }
+}

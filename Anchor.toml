@@ -1,0 +1,40 @@
+[features]
+seeds = true
+skip-lint = false
+[programs.devnet]
+solana_randomness_consumer = "F2kR2Es3YgFkX1rReUDneVxv1bp2UZJWrpEGBXvdfKyg"
+solana_randomness_service = "RANDa4nas8AqeYP7LXGu6VSSZqqHYQv5vW6P82peWsP"
+
+[programs.localnet]
+solana_randomness_consumer = "F2kR2Es3YgFkX1rReUDneVxv1bp2UZJWrpEGBXvdfKyg"
+solana_randomness_service = "RANDa4nas8AqeYP7LXGu6VSSZqqHYQv5vW6P82peWsP"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+# wallet = "~/.config/solana/id.json"
+wallet = "~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
+
+[scripts]
+initialize = "tsx ./scripts/initialize.ts"
+request = "tsx ./scripts/request.ts"
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[test]
+startup_wait = 15000
+shutdown_wait = 2000
+upgradeable = false
+
+[test.validator]
+bind_address = "0.0.0.0"
+url = "https://api.devnet.solana.com"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
+
+[[test.validator.clone]] # Switchboard Attestation program
+address = "FXUv1NMyzr11hG5kCpaWp6WiHJr5qvkVFcsnB7vjcFix"
+
+[[test.validator.clone]] # Switchboard AttestationProgramState account
+address = "8qDeqDTqfdQWAriqVhVXxJggC4vQBzd86N3GsHwC59te"
