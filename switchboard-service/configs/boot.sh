@@ -5,18 +5,12 @@ if [[ "${UID}" -ne 0 ]]; then
 fi
 
 function verify_aesm_service() {
-  local retries=0
-  while [[ ${retries} -lt 5 ]]; do
-    if pgrep aesm_service > /dev/null; then
-      echo "aesm_service is running."
+  if pgrep aesm_service > /dev/null; then
       return 0
-    else
-      echo "Error: aesm_service is not running. Retrying in 1 second..."
-      sleep 1
-      ((retries++))
-    fi
-  done
-  return 1
+  else
+      echo "Error: aesm_service is not running."
+      return 1
+  fi
 }
 
 if ! verify_aesm_service; then
