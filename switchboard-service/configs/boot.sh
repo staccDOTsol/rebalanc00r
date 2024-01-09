@@ -8,14 +8,19 @@ function verify_aesm_service() {
   if pgrep aesm_service > /dev/null; then
       return 0
   else
-      echo "Error: aesm_service is not running."
       return 1
   fi
 }
 
 if ! verify_aesm_service; then
   echo "Error: aesm_service is not running"
-  exit 1
+
+  echo "Running /restart_aesm.sh"
+  (
+    /restart_aesm.sh
+  )
+
+  # exit 1
 fi
 
 echo "Starting enclave.."
