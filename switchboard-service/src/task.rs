@@ -165,7 +165,7 @@ impl CompiledTaskBatch {
                 }
                 Err(e) => {
                     error!("Randomness Txn Error: {:?}", e);
-                    // TODO: should we handle this better
+                    // TODO: handle this better and retry failures
                 }
             }
         }

@@ -52,7 +52,7 @@ pub struct SolanaService {
     ////////////////////////////////////////
     // Cache
     ////////////////////////////////////////
-    pub in_flight_requests: Arc<DashSet<Pubkey>>,
+    // pub in_flight_requests: Arc<DashSet<Pubkey>>,
 
     ////////////////////////////////////////
     // Worker
@@ -109,7 +109,7 @@ impl SolanaService {
             )),
 
             // Cache
-            in_flight_requests: Arc::new(DashSet::new()),
+            // in_flight_requests: Arc::new(DashSet::new()),
 
             // Worker
             task_queue,
@@ -548,11 +548,11 @@ impl SolanaService {
     async fn handle_randomness_requested_event(&self, event: RandomnessRequested) {
         debug!("[EVENT][REQUEST] {:#?}", event);
 
-        // Check if in_flight_requests contains the request id
-        if self.in_flight_requests.contains(&event.request) {
-            info!("[EVENT][REQUEST] Request already in flight");
-            return;
-        }
+        // // Check if in_flight_requests contains the request id
+        // if self.in_flight_requests.contains(&event.request) {
+        //     info!("[EVENT][REQUEST] Request already in flight");
+        //     return;
+        // }
 
         // Add to Injector queue
         self.task_queue.push(RandomnessTask {
@@ -609,9 +609,9 @@ impl SolanaService {
         };
 
         for (request_pubkey, request_account) in program_accounts {
-            if self.in_flight_requests.contains(&request_pubkey) {
-                continue;
-            }
+            // if self.in_flight_requests.contains(&request_pubkey) {
+            //     continue;
+            // }
 
             let request_state =
                 match RandomnessRequest::try_deserialize(&mut &request_account.data[..]) {
@@ -631,7 +631,7 @@ impl SolanaService {
 
             self.task_queue.push(task);
 
-            self.in_flight_requests.insert(request_pubkey);
+            // self.in_flight_requests.insert(request_pubkey);
             debug!("[PROGRAM_ACCOUNTS] Found request: {:?}", request_pubkey);
         }
     }
