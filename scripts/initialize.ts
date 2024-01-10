@@ -49,7 +49,7 @@ dotenv.config();
   prettyLog(`ProgramState`, programStatePubkey, ["env"]);
 
   const switchboard = await SwitchboardProgram.fromProvider(provider);
-  prettyLog(`Switchboard`, switchboard.attestationProgramState, ["env"]);
+  prettyLog(`Switchboard`, switchboard.attestationProgramId, ["env"]);
 
   try {
     const state = await randomnessService.account.state.fetch(

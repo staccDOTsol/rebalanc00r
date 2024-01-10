@@ -82,6 +82,15 @@ impl SolanaService {
         let function_data =
             FunctionAccountData::fetch_async(&ctx.rpc, service_data.function).await?;
 
+        let blockhash = retry!(
+            5,
+            250,
+            ctx.rpc
+                .get_latest_blockhash_with_commitment(CommitmentConfig::confirmed())
+                .await
+        )
+        .await;
+
         Ok(Self {
             // Status / Health
             status: worker_status,
@@ -92,7 +101,7 @@ impl SolanaService {
             pubsub_client: Arc::new(pubsub_client),
 
             // On-Chain State
-            recent_blockhash: Default::default(),
+            recent_blockhash: Arc::new(RwLock::new(blockhash.unwrap_or_default())),
             service_account: Arc::new(RwLock::new(service_data)),
             request_accounts: Arc::new(DashMap::new()),
             func_signer_rotation_interval: Arc::new(RwLock::new(
@@ -555,13 +564,13 @@ impl SolanaService {
     }
 
     /// Periodically fetch the Solana time from on-chain so we know when to execute functions.
-    #[routine(interval = 1)]
+    #[routine(interval = 3)]
     async fn watch_blockhash(&self) {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
 
         let blockhash_result = tokio::join!(ctx
             .rpc
-            .get_latest_blockhash_with_commitment(CommitmentConfig::processed()));
+            .get_latest_blockhash_with_commitment(CommitmentConfig::confirmed()));
 
         if let Ok((blockhash, slot)) = blockhash_result.0 {
             let mut recent_blockhash = self.recent_blockhash.write().await;
