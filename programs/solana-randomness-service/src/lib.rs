@@ -222,9 +222,16 @@ pub mod solana_randomness_service {
                     }
 
                     if account.pubkey == ctx.accounts.state.key() {
-                        callback_account_metas.push(account.into());
-                        callback_account_infos.push(ctx.accounts.state.to_account_info());
-                        continue;
+                        // TODO: do we need to handle this differently? We should always require state to sign and throw an error if not.
+                        if account.is_signer.to_bool() {
+                            callback_account_metas.push(account.into());
+                            callback_account_infos.push(ctx.accounts.state.to_account_info());
+                            continue;
+                        } else {
+                            callback_account_metas.push(account.into());
+                            callback_account_infos.push(ctx.accounts.state.to_account_info());
+                            continue;
+                        }
                     }
 
                     let account_info = remaining_accounts.get(&account.pubkey).unwrap();
@@ -256,7 +263,11 @@ pub mod solana_randomness_service {
                 accounts: callback_account_metas,
             };
 
-            match invoke(&callback_ix, &callback_account_infos) {
+            match invoke_signed(
+                &callback_ix,
+                &callback_account_infos,
+                &[&[b"STATE", &[ctx.accounts.state.bump]]],
+            ) {
                 Err(e) => {
                     msg!("Error invoking user callback: {:?}", e);
                 }
@@ -264,7 +275,17 @@ pub mod solana_randomness_service {
                     msg!("Successfully invoked user callback");
                     is_success = true;
                 }
-            };
+            }
+
+            // match invoke(&callback_ix, &callback_account_infos) {
+            //     Err(e) => {
+            //         msg!("Error invoking user callback: {:?}", e);
+            //     }
+            //     Ok(_) => {
+            //         msg!("Successfully invoked user callback");
+            //         is_success = true;
+            //     }
+            // };
         }
 
         // TODO: we should only close here if the callback was executed successfully

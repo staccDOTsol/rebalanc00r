@@ -3,6 +3,7 @@ use crate::*;
 use crate::types::*;
 
 // TODO: Add a base_mint, base_wallet, and base_cost_per_byte to the program state for wrapped SOL costs. Then other fees can be in a custom mint.
+// TODO: Add the ability to unwrap rewards to fund the hot wallet
 
 /// Program global state for processing randomness requests.
 #[account]

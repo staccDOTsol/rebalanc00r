@@ -34,7 +34,7 @@ impl CompiledTask {
         // Then add the vec elements
         ixn_data.append(&mut self.randomness_bytes.clone());
 
-        let program_state_pubkey =
+        let randomness_state_pubkey =
             Pubkey::find_program_address(&[b"STATE"], &RandomnessServiceID).0;
 
         let mut ixn = Instruction {
@@ -53,10 +53,10 @@ impl CompiledTask {
                     false,
                 ),
                 // State
-                AccountMeta::new_readonly(program_state_pubkey, false),
+                AccountMeta::new_readonly(randomness_state_pubkey, false),
                 // State Wallet (mut)
                 AccountMeta::new(
-                    get_associated_token_address(&program_state_pubkey, &NativeMint::ID),
+                    get_associated_token_address(&randomness_state_pubkey, &NativeMint::ID),
                     false,
                 ),
                 // SWITCHBOARD
@@ -74,6 +74,19 @@ impl CompiledTask {
 
         // Next, add all of the callback accounts
         for account in self.callback.accounts.iter() {
+            // Exclude the randomness_state and randomness_request accounts to reduce number of accounts
+            if account.pubkey == payer {
+                continue;
+            }
+
+            if account.pubkey == self.request {
+                continue;
+            }
+
+            if account.pubkey == randomness_state_pubkey {
+                continue;
+            }
+
             ixn.accounts.push(account.into());
         }
 

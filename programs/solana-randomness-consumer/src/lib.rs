@@ -1,7 +1,4 @@
-// use solana_randomness_service::macros::*;
-use solana_randomness_service::{
-    program::SolanaRandomnessService, request_randomness, RandomnessRequest,
-};
+use solana_randomness_service::{program::SolanaRandomnessService, RandomnessRequest};
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
 
@@ -19,12 +16,19 @@ pub mod solana_randomness_consumer {
             8,
             solana_randomness_service::types::Callback {
                 program_id: ID,
-                accounts: vec![solana_randomness_service::types::AccountMetaBorsh {
-                    pubkey: ctx.accounts.randomness_request.key(),
-                    is_signer: false,
-                    is_writable: false,
-                }],
-                ix_data: get_ixn_discriminator("consume_randomness").to_vec(),
+                accounts: vec![
+                    solana_randomness_service::types::AccountMetaBorsh {
+                        pubkey: ctx.accounts.randomness_state.key(),
+                        is_signer: true,
+                        is_writable: false,
+                    },
+                    solana_randomness_service::types::AccountMetaBorsh {
+                        pubkey: ctx.accounts.randomness_request.key(),
+                        is_signer: false,
+                        is_writable: false,
+                    },
+                ],
+                ix_data: get_ixn_discriminator("consume_randomness").to_vec(), // TODO: hardcode this discriminator
             },
         )?;
 
@@ -96,6 +100,19 @@ pub struct RequestRandomness<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
+#[derive(Accounts)]
+pub struct ConsumeRandomness<'info> {
+    /// We need to make sure the randomness service signed this requests so it can only be invoked by a PDA and not a user.
+    #[account(
+        signer,
+        seeds = [b"STATE"],
+        bump = randomness_state.bump,
+    )]
+    pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,
+
+    pub request: AccountLoader<'info, RandomnessRequest>,
+}
+
 impl<'info> RequestRandomness<'info> {
     /// Requests randomness from the Solana Randomness Service.
     ///
@@ -149,9 +166,4 @@ impl<'info> RequestRandomness<'info> {
 
         Ok(())
     }
-}
-
-#[derive(Accounts)]
-pub struct ConsumeRandomness<'info> {
-    pub request: AccountLoader<'info, RandomnessRequest>,
 }
