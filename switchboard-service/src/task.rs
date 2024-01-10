@@ -232,7 +232,7 @@ impl CompiledTaskBatch {
                                                                                     error!("[3007] Randomness Instruction Error: {:#?}\n{}", ix_error, logs);
                                                                                 }
                                                                             }
-                                                                            
+                                                                            // handle other cases here
                                                                             _ => {
                                                                                 error!("[{}] Randomness Instruction Error: {:#?}\n{}", code, ix_error, logs);
                                                                             }
