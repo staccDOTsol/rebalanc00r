@@ -278,7 +278,7 @@ async fn worker_thread(
                         }
 
                         // No task available, sleep for a short duration before retrying
-                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        tokio::time::sleep(Duration::from_millis(50)).await;
                     }
                     Steal::Empty => {
                         if shutdown_requested {
@@ -286,7 +286,7 @@ async fn worker_thread(
                         }
 
                         // Queue is permanently empty, break the loop
-                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        tokio::time::sleep(Duration::from_millis(50)).await;
                     }
                 }
             }
