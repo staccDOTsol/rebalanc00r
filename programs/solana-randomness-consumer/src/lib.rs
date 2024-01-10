@@ -37,7 +37,6 @@ pub mod solana_randomness_consumer {
         ctx: Context<ConsumeRandomness>,
         result: Vec<u8>,
     ) -> anchor_lang::prelude::Result<()> {
-        if ctx.
         msg!("Randomness received: {:?}", result);
         Ok(())
     }

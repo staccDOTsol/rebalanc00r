@@ -45,15 +45,6 @@ FROM switchboardlabs/gramine
 # Can be overwritten by mounting a volume
 RUN mkdir -p /data/protected_files
 
-# We need curl for the healthcheck
-RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,id=apt-lib,target=/var/lib/apt,sharing=locked \
-    --mount=type=cache,id=debconf,target=/var/cache/debconf,sharing=locked \
-    set -exu && \
-    DEBIAN_FRONTEND=noninteractive apt update && \
-    apt -y --no-install-recommends install \
-    curl
-
 WORKDIR /app
 
 COPY --from=builder /app/worker /app/worker
@@ -67,7 +58,7 @@ RUN gramine-sgx-sign --manifest /app/worker.manifest --output /app/worker.manife
 
 RUN chmod a+x /boot.sh
 
-HEALTHCHECK --start-period=30s --interval=30s --timeout=3s \
-     CMD curl -f http://0.0.0.0:8080/healthz || exit 1
+# HEALTHCHECK --start-period=30s --interval=30s --timeout=3s \
+#      CMD curl -f http://0.0.0.0:8080/healthz || exit 1
 
 ENTRYPOINT bash /boot.sh
