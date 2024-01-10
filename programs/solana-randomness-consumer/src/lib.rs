@@ -106,6 +106,7 @@ pub struct ConsumeRandomness<'info> {
     #[account(
         signer,
         seeds = [b"STATE"],
+        seeds::program = solana_randomness_service::ID,
         bump = randomness_state.bump,
     )]
     pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,

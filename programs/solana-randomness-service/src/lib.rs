@@ -263,6 +263,7 @@ pub mod solana_randomness_service {
                 accounts: callback_account_metas,
             };
 
+            // TODO: Why is this panicking and not catching the error?
             match invoke_signed(
                 &callback_ix,
                 &callback_account_infos,
@@ -276,16 +277,6 @@ pub mod solana_randomness_service {
                     is_success = true;
                 }
             }
-
-            // match invoke(&callback_ix, &callback_account_infos) {
-            //     Err(e) => {
-            //         msg!("Error invoking user callback: {:?}", e);
-            //     }
-            //     Ok(_) => {
-            //         msg!("Successfully invoked user callback");
-            //         is_success = true;
-            //     }
-            // };
         }
 
         // TODO: we should only close here if the callback was executed successfully
