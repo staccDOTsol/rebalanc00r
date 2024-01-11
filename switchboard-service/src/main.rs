@@ -135,11 +135,12 @@ async fn main() -> Result<()> {
         )
         .init();
 
+    let env = SolanaServiceEnvironment::parse()?;
+
     Toplevel::new(|s| async move {
         s.start(SubsystemBuilder::new(
             "main_thread",
             move |subsys| async move {
-                let env = SolanaServiceEnvironment::parse()?;
                 let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
                 let ctx_arc = Arc::new(ctx.clone());
 

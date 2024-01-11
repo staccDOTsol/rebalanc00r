@@ -14,8 +14,8 @@ url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "~/.config/solana/id.json"
-# wallet = "~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
+# wallet = "~/.config/solana/id.json"
+wallet = "~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
 
 [scripts]
 initialize = "tsx ./scripts/initialize.ts"

@@ -46,9 +46,8 @@ impl ServiceContext {
             },
         ));
 
-        // let service_pubkey =
-        //     Pubkey::from_str(&env.service_key).expect("Failed to parse SERVICE_KEY");
-        let service_pubkey = env.service_key;
+        let service_pubkey =
+            Pubkey::from_str(&env.service_key).expect("Failed to parse SERVICE_KEY");
         let service_data =
             FunctionServiceAccountData::fetch_async(&default_rpc, service_pubkey).await?;
 
