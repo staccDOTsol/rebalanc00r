@@ -578,7 +578,7 @@ impl SolanaService {
         }
     }
 
-    /// Periodically fetch the Solana time from on-chain so we know when to execute functions.
+    /// Periodically fetch the request accounts to catch missed events
     #[routine(interval = 10)]
     async fn watch_request_accounts(&self) {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;

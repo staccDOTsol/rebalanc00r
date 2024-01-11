@@ -21,7 +21,7 @@ all = []
 anchor-lang = { version = "0.29.0" }
 anchor-spl = "0.29.0"
 bytemuck = "1.14.0"
-switchboard-solana = { package = "switchboard-solana-staging", version = "0.29.100" }
+switchboard-solana = { package = "switchboard-solana-staging", version = "0.29.102" }
 
 # [target.'cfg(target_os = "solana")'.dependencies]
 solana-randomness-service-macros = { path = "../../crates/solana-randomness-service-macros" }
