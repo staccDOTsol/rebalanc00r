@@ -28,9 +28,9 @@ pub use state::*;
 pub mod utils;
 pub use utils::*;
 
-declare_id!("RANDa4nas8AqeYP7LXGu6VSSZqqHYQv5vW6P82peWsP");
+declare_id!("iNGJrcKxT9jqVtJFdVP5HjRjWELs9YwDeMtGiNgRYvP");
 
-pub use types::{AccountMetaBorsh, AccountMetaZC, Callback, CallbackZC};
+pub use types::{AccountMetaBorsh, Callback};
 
 // We will listen to this event inside of our service
 #[event]
@@ -120,12 +120,11 @@ pub mod solana_randomness_service {
         )?;
 
         msg!("initializing the request");
-        let request = &mut ctx.accounts.request.load_init()?;
 
-        request.user = ctx.accounts.payer.key();
-        request.request_slot = Clock::get()?.slot;
-        request.num_bytes = num_bytes;
-        request.callback = callback.clone().into();
+        ctx.accounts.request.user = ctx.accounts.payer.key();
+        ctx.accounts.request.request_slot = Clock::get()?.slot;
+        ctx.accounts.request.num_bytes = num_bytes;
+        ctx.accounts.request.callback = callback.clone();
 
         // wrap funds from the payer to the escrow account to reward Switchboard service for fuliflling our request
         let cost = ctx.accounts.state.request_cost(num_bytes);
@@ -158,18 +157,22 @@ pub mod solana_randomness_service {
         // Verify this method was not called from a CPI
         assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
 
-        let request = ctx.accounts.request.load()?;
-
         // Need to make sure the payer is not included in the callback as a writeable account. Otherwise, the payer could be drained of funds.
-        for account in request.callback.accounts[..request.callback.accounts_len as usize].iter() {
-            if account.pubkey == ctx.accounts.payer.key() && account.is_writable == 1 {
+        for account in ctx.accounts.request.callback.accounts
+            [..ctx.accounts.request.callback.accounts.len()]
+            .iter()
+        {
+            if account.pubkey == ctx.accounts.payer.key() && account.is_writable {
                 // TODO: We should still transfer funds and close the request without invoking the callback. Wasting our time.
                 return Err(error!(RandomnessError::InvalidCallback));
             }
         }
 
         // Transfer reward (all funds) to the program_state
-        let cost = ctx.accounts.state.request_cost(request.num_bytes);
+        let cost = ctx
+            .accounts
+            .state
+            .request_cost(ctx.accounts.request.num_bytes);
         msg!("cost: {:?}", cost);
 
         // verify the escrow has enough funds
@@ -190,16 +193,16 @@ pub mod solana_randomness_service {
         }
 
         // Perform callback into the clients program
-        let user_callback = &request.callback;
+        let user_callback = &ctx.accounts.request.callback;
         let mut is_success = false;
 
         if user_callback.program_id == Pubkey::default() {
             msg!("The user's callback is undefined, skipping callback")
         } else {
             let mut callback_account_metas: Vec<anchor_lang::prelude::AccountMeta> =
-                Vec::with_capacity(user_callback.accounts_len as usize + 1);
+                Vec::with_capacity(user_callback.accounts.len() + 1);
             let mut callback_account_infos: Vec<AccountInfo> =
-                Vec::with_capacity(user_callback.accounts_len as usize + 1);
+                Vec::with_capacity(user_callback.accounts.len() + 1);
 
             let remaining_accounts: HashMap<Pubkey, AccountInfo<'info>> = ctx
                 .remaining_accounts
@@ -209,8 +212,8 @@ pub mod solana_randomness_service {
 
             let mut randomness_state_is_signer = false;
 
-            for account in user_callback.accounts[..user_callback.accounts_len as usize].iter() {
-                if account.pubkey == ctx.accounts.payer.key() && account.is_writable == 1 {
+            for account in user_callback.accounts[..user_callback.accounts.len()].iter() {
+                if account.pubkey == ctx.accounts.payer.key() && account.is_writable {
                     // TODO: handle this better
                     continue;
                 }
@@ -228,7 +231,7 @@ pub mod solana_randomness_service {
 
                 if account.pubkey == ctx.accounts.state.key() {
                     // TODO: do we need to handle this differently? We should always require state to sign and throw an error if not.
-                    if account.is_signer.to_bool() {
+                    if account.is_signer {
                         randomness_state_is_signer = true;
                     }
 
@@ -258,7 +261,7 @@ pub mod solana_randomness_service {
             drop(remaining_accounts);
 
             let callback_data = [
-                user_callback.ix_data[..user_callback.ix_data_len as usize].to_vec(),
+                user_callback.ix_data[..user_callback.ix_data.len()].to_vec(),
                 (result.len() as u32).to_le_bytes().to_vec(),
                 result.to_vec(),
             ]
@@ -390,15 +393,15 @@ pub struct SetFeeConfig<'info> {
 /// Request
 /////////////////////////////////////////////////////////////
 
-// #[event_cpi]
 #[derive(Accounts)]
+#[instruction(num_bytes: u32, callback: Callback)]
 pub struct Request<'info> {
     #[account(
         init,
         payer = payer,
-        space = RandomnessRequest::size()
+        space = RandomnessRequest::space(&callback)
     )]
-    pub request: AccountLoader<'info, RandomnessRequest>,
+    pub request: Box<Account<'info, RandomnessRequest>>,
 
     #[account(
         init,
@@ -434,7 +437,6 @@ pub struct Request<'info> {
 /////////////////////////////////////////////////////////////
 /// Settle
 /////////////////////////////////////////////////////////////
-// #[event_cpi]
 #[derive(Accounts)]
 pub struct Settle<'info> {
     /// The account that pays for the randomness request
@@ -449,7 +451,7 @@ pub struct Settle<'info> {
         close = user,
         has_one = user,
     )]
-    pub request: AccountLoader<'info, RandomnessRequest>,
+    pub request: Box<Account<'info, RandomnessRequest>>,
 
     /// CHECK:
     #[account(

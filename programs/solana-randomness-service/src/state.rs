@@ -40,18 +40,20 @@ impl State {
 
 /// Keypair account used as a fallback for listening to randomness requests.
 /// These accounts are ephemeral and are intended to be closed upon completion.
-#[account(zero_copy(unsafe))]
-#[derive(Debug)]
-#[repr(packed)]
+#[account]
+#[derive(Debug, Default, InitSpace)]
 pub struct RandomnessRequest {
     pub user: Pubkey,
     pub request_slot: u64,
     pub num_bytes: u32,
-    pub callback: CallbackZC,
+    pub callback: Callback,
 }
 impl RandomnessRequest {
-    /// Returns the size of the function account data in bytes. Includes the discriminator.
-    pub fn size() -> usize {
-        8 + std::mem::size_of::<RandomnessRequest>()
+    pub fn space(callback: &Callback) -> usize {
+        let base: usize = 8  // discriminator
+            + solana_program::borsh0_10::get_instance_packed_len(Box::<RandomnessRequest>::default().as_ref()).unwrap();
+
+        base + (callback.ix_data.len())
+            + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len())
     }
 }

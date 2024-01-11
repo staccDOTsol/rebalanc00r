@@ -2,7 +2,7 @@ use solana_randomness_service::{program::SolanaRandomnessService, RandomnessRequ
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
 
-declare_id!("F2kR2Es3YgFkX1rReUDneVxv1bp2UZJWrpEGBXvdfKyg");
+declare_id!("Hr6JXoRxucdbQ4VpZERpHhsopiFjTiXLvRcyn6Fzvsih");
 
 #[program]
 pub mod solana_randomness_consumer {
@@ -111,7 +111,7 @@ pub struct ConsumeRandomness<'info> {
     )]
     pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,
 
-    pub request: AccountLoader<'info, RandomnessRequest>,
+    pub request: Box<Account<'info, RandomnessRequest>>,
 }
 
 impl<'info> RequestRandomness<'info> {

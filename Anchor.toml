@@ -1,20 +1,23 @@
+[toolchain]
+
 [features]
 seeds = true
 skip-lint = false
+
 [programs.devnet]
-solana_randomness_consumer = "F2kR2Es3YgFkX1rReUDneVxv1bp2UZJWrpEGBXvdfKyg"
-solana_randomness_service = "RANDa4nas8AqeYP7LXGu6VSSZqqHYQv5vW6P82peWsP"
+solana_randomness_consumer = "Hr6JXoRxucdbQ4VpZERpHhsopiFjTiXLvRcyn6Fzvsih"
+solana_randomness_service = "iNGJrcKxT9jqVtJFdVP5HjRjWELs9YwDeMtGiNgRYvP"
 
 [programs.localnet]
-solana_randomness_consumer = "F2kR2Es3YgFkX1rReUDneVxv1bp2UZJWrpEGBXvdfKyg"
-solana_randomness_service = "RANDa4nas8AqeYP7LXGu6VSSZqqHYQv5vW6P82peWsP"
+solana_randomness_consumer = "Hr6JXoRxucdbQ4VpZERpHhsopiFjTiXLvRcyn6Fzvsih"
+solana_randomness_service = "iNGJrcKxT9jqVtJFdVP5HjRjWELs9YwDeMtGiNgRYvP"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "~/.config/solana/id.json"
+wallet = "/Users/gally/.config/solana/id.json"
 # wallet = "~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
 
 [scripts]
@@ -33,8 +36,8 @@ url = "https://api.devnet.solana.com"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
-[[test.validator.clone]] # Switchboard Attestation program
+[[test.validator.clone]]
 address = "FXUv1NMyzr11hG5kCpaWp6WiHJr5qvkVFcsnB7vjcFix"
 
-[[test.validator.clone]] # Switchboard AttestationProgramState account
+[[test.validator.clone]]
 address = "8qDeqDTqfdQWAriqVhVXxJggC4vQBzd86N3GsHwC59te"
