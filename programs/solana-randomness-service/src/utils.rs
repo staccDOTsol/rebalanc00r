@@ -1,4 +1,8 @@
 use crate::*;
+use solana_program::instruction::{get_stack_height, TRANSACTION_LEVEL_STACK_HEIGHT};
+use solana_program::sysvar::instructions::{
+    load_current_index_checked, load_instruction_at_checked,
+};
 
 pub fn wrap_native<'a>(
     system_program: &AccountInfo<'a>,
@@ -53,5 +57,33 @@ pub fn transfer<'a>(
     };
     let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, auth_seed);
     anchor_spl::token::transfer(cpi_ctx, amount)?;
+    Ok(())
+}
+
+/// Asserts that the current instruction is not a CPI call. This is to prevent re-entrancy from user provided callbacks.
+pub fn assert_not_cpi_call(sysvar_info: &AccountInfo) -> std::result::Result<(), ProgramError> {
+    let ix_idx: usize = load_current_index_checked(sysvar_info)?.into();
+
+    // say the tx looks like:
+    // ix 0
+    //   - ix a
+    //   - ix b
+    //   - ix c
+    // ix 1
+    // and we call "load_current_index_checked" from b, we will get 0. And when we
+    // load_instruction_at_checked(0), we will get ix 0.
+    // tldr; instructions sysvar only stores top-level instructions, never CPI instructions.
+    let current_ixn = load_instruction_at_checked(ix_idx.into(), sysvar_info)?;
+
+    // the current ixn must match the flash_* ix. otherwise, it's a CPI. Comparing program_ids is a
+    // cheaper way of verifying this property, bc token-lending doesn't allow re-entrancy anywhere.
+    if crate::ID != current_ixn.program_id {
+        return Err(error!(RandomnessError::CpiUnauthorized).into());
+    }
+
+    if get_stack_height() > TRANSACTION_LEVEL_STACK_HEIGHT {
+        return Err(error!(RandomnessError::CpiUnauthorized).into());
+    }
+
     Ok(())
 }

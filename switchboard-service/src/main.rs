@@ -142,7 +142,6 @@ async fn main() -> Result<()> {
                 let env = SolanaServiceEnvironment::parse()?;
                 let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
                 let ctx_arc = Arc::new(ctx.clone());
-                let payer_pubkey = ctx.payer.pubkey();
 
                 let secure_signer = Arc::new(SecureSigner::new(ctx_arc.clone())?);
 
@@ -170,8 +169,6 @@ async fn main() -> Result<()> {
                     move |s| async move {
                         worker_thread(
                             s,
-                            // menv.clone(),
-                            // payer_pubkey,
                             mtask_queue.clone(),
                             task_queue_tx,
                         )
@@ -185,13 +182,7 @@ async fn main() -> Result<()> {
                 subsys.start(SubsystemBuilder::new(
                     "rotate_signer_thread",
                     move |s| async move {
-                        rotate_signer_thread(
-                            s,
-                            // menv.clone(),
-                            msecure_signer.clone(),
-                            rotate_signer_rx,
-                        )
-                        .await
+                        rotate_signer_thread(s, msecure_signer.clone(), rotate_signer_rx).await
                     },
                 ));
 
@@ -205,7 +196,6 @@ async fn main() -> Result<()> {
                     move |s| async move {
                         service_thread(
                             s,
-                            // mctx.clone(),
                             msecure_signer.clone(),
                             mtask_queue.clone(),
                             task_queue_rx,

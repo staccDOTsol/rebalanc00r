@@ -13,4 +13,8 @@ pub enum RandomnessError {
     InsufficientFunds,
     #[msg("User's callback cannot be executed")]
     InvalidCallback,
+    #[msg("Account not found in remaining_accounts")]
+    MissingCallbackAccount,
+    #[msg("This instruction cannot be invoked with a CPI call")]
+    CpiUnauthorized
 }

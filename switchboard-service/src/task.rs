@@ -5,6 +5,7 @@ use solana_client::client_error::{ClientError, ClientErrorKind};
 use solana_client::rpc_request::{RpcError, RpcResponseErrorData};
 use solana_client::rpc_response::RpcSimulateTransactionResult;
 use solana_program::instruction::InstructionError;
+pub use solana_program::sysvar::instructions::ID as SYSVAR_INSTRUCTIONS_ID;
 use solana_sdk::transaction::TransactionError;
 use switchboard_solana::rust_decimal::prelude::Zero;
 
@@ -69,6 +70,8 @@ impl CompiledTask {
                 AccountMeta::new_readonly(TokenProgramID, false),
                 // Callback PID
                 AccountMeta::new_readonly(self.callback.program_id, false),
+                // Instructions Sysvar
+                AccountMeta::new_readonly(SYSVAR_INSTRUCTIONS_ID, false),
             ],
         };
 
@@ -99,15 +102,16 @@ impl CompiledTask {
         recent_blockhash: Arc<(Hash, u64)>,
     ) -> Result<Signature, SbError> {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
+        let payer = Arc::new(ctx.payer.read().await);
 
         let ix = self.build_ixn(
-            ctx.payer.pubkey(),
+            payer.pubkey(),
             ctx.function,
             ctx.service,
             enclave_signer.pubkey(),
         )?;
-        let mut tx = Transaction::new_with_payer(&[ix.clone()], Some(&ctx.payer.pubkey()));
-        let signers = vec![ctx.payer.as_ref(), enclave_signer.deref()];
+        let mut tx = Transaction::new_with_payer(&[ix.clone()], Some(&payer.pubkey()));
+        let signers = vec![payer.as_ref(), enclave_signer.deref()];
 
         match tx.try_sign(&signers, recent_blockhash.0) {
             Ok(_) => {}

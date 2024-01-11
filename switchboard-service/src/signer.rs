@@ -1,11 +1,10 @@
 use crate::*;
 
+use switchboard_solana::solana_sdk::signer::Signer;
 use tokio::runtime::Handle;
 
 // TODO
-// * Add a thread to periodically watch service data and rotate the signer if needed
 // * We should watch service data and if signer rotated, we should trigger shutdown
-// * We should add the ability to support the primary and expiring signer. The previous signer expires 5 mins after the new signer is verified
 // * We should generalize this and add to our SDK for easy use by other services
 
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -151,13 +150,17 @@ impl SecureSigner {
                 registry_key: registry_key.to_vec(),
             },
         )?;
+
         let blockhash = retry!(5, 1000, self.ctx.rpc.get_latest_blockhash().await)
             .await
             .map_err(|_| SbError::SolanaBlockhashError)?;
+
+        let payer = self.ctx.payer.read().await;
+
         let txn = Transaction::new_signed_with_payer(
             &[ixn],
-            Some(&self.ctx.payer.pubkey()),
-            &[&self.ctx.payer, &signer],
+            Some(&payer.pubkey()),
+            &[&payer, &signer],
             blockhash,
         );
         let signature = match self.ctx.rpc.send_and_confirm_transaction(&txn).await {

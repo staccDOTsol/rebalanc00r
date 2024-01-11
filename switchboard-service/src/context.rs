@@ -3,13 +3,9 @@ use crate::*;
 // Summary
 // * This stores the context used by the rest of the service to easily share context and rpc
 // * Should never change for the lifetime of the service
-// * We might need to wrap payer in RwLock to prevent too many copies being spawned
 // * It might make sense to add better parsing to SolanaServicesEnvironment so it can parse strings -> pubkeys, url -> RpcClient so we can have a single env to share across.
 
 // TODO:
-// * We should add a method to fetch all accounts with get_multiple_account_infos
-// * Add ability to load payer secret from a secret
-// * Add ability to load rpc url from a secret
 // * Fetch telemetry endpoint to send signatures / logs / metrics for customer to monitor themselves
 
 pub static SWITCHBOARD_CONTEXT: OnceCell<ServiceContext> = OnceCell::const_new();
@@ -17,7 +13,7 @@ pub static SWITCHBOARD_CONTEXT: OnceCell<ServiceContext> = OnceCell::const_new()
 #[derive(Clone)]
 pub struct ServiceContext {
     pub rpc: Arc<RpcClient>,
-    pub payer: Arc<Keypair>, // TODO: should this be RwLock to prevent too many copies being spawned
+    pub payer: Arc<RwLock<Keypair>>,
     pub service: Pubkey,
     pub service_worker: Pubkey,
     pub attestation_queue: Pubkey,
@@ -50,8 +46,9 @@ impl ServiceContext {
             },
         ));
 
-        let service_pubkey =
-            Pubkey::from_str(&env.service_key).expect("Failed to parse SERVICE_KEY");
+        // let service_pubkey =
+        //     Pubkey::from_str(&env.service_key).expect("Failed to parse SERVICE_KEY");
+        let service_pubkey = env.service_key;
         let service_data =
             FunctionServiceAccountData::fetch_async(&default_rpc, service_pubkey).await?;
 
@@ -63,11 +60,13 @@ impl ServiceContext {
 
         let payer = if let Some(secret) = secrets.keys.get("SERVICE_PAYER_SECRET") {
             info!("[SECRET] Found secret for SERVICE_PAYER_SECRET");
-            Arc::new(read_keypair(&mut std::io::Cursor::new(&secret)).unwrap())
+            let kp = read_keypair(&mut std::io::Cursor::new(&secret))
+                .expect("Failed to read SERVICE_PAYER_SECRET");
+            info!("[ENV] Payer: {}", kp.pubkey());
+            Arc::new(RwLock::new(kp))
         } else {
             return Err(SbError::Message("SERVICE_PAYER_SECRET not found"));
         };
-        info!("Payer: {}", payer.pubkey());
 
         let rpc = if let Some(rpc_url) = secrets.keys.get("SERVICE_RPC_URL") {
             info!("[SECRET] Found secret for SERVICE_RPC_URL");

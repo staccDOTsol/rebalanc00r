@@ -1,15 +1,12 @@
 pub use switchboard_solana::prelude::*;
 
 pub use anchor_spl::token::{spl_token::instruction::AuthorityType, SetAuthority};
+pub use solana_program::sysvar::instructions::ID as SYSVAR_INSTRUCTIONS_ID;
 pub use std::collections::HashMap;
 pub use switchboard_solana::prelude::NativeMint;
 
 pub mod macros;
 pub use macros::*;
-
-// Only need macros for CPI interfaces
-// #[cfg(target_os = "solana")]
-// #[cfg_attr(doc_cfg, doc(cfg(target_os = "solana")))]
 
 // SDK is intended for off-chain use functionality like client fetching
 #[cfg(not(target_os = "solana"))]
@@ -158,6 +155,9 @@ pub mod solana_randomness_service {
         ctx: Context<'a, 'b, 'c, 'info, Settle<'info>>,
         result: Vec<u8>,
     ) -> anchor_lang::prelude::Result<()> {
+        // Verify this method was not called from a CPI
+        assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
+
         let request = ctx.accounts.request.load()?;
 
         // Need to make sure the payer is not included in the callback as a writeable account. Otherwise, the payer could be drained of funds.
@@ -201,49 +201,61 @@ pub mod solana_randomness_service {
             let mut callback_account_infos: Vec<AccountInfo> =
                 Vec::with_capacity(user_callback.accounts_len as usize + 1);
 
-            {
-                let remaining_accounts: HashMap<Pubkey, AccountInfo<'info>> = ctx
-                    .remaining_accounts
-                    .iter()
-                    .map(|a| (a.key(), a.clone()))
-                    .collect();
+            let remaining_accounts: HashMap<Pubkey, AccountInfo<'info>> = ctx
+                .remaining_accounts
+                .iter()
+                .map(|a| (a.key(), a.clone()))
+                .collect();
 
-                for account in user_callback.accounts[..user_callback.accounts_len as usize].iter()
-                {
-                    if account.pubkey == ctx.accounts.payer.key() && account.is_writable == 1 {
-                        // TODO: handle this better
-                        continue;
-                    }
+            let mut randomness_state_is_signer = false;
 
-                    if account.pubkey == ctx.accounts.request.key() {
-                        callback_account_metas.push(account.into());
-                        callback_account_infos.push(ctx.accounts.request.to_account_info());
-                        continue;
-                    }
-
-                    if account.pubkey == ctx.accounts.state.key() {
-                        // TODO: do we need to handle this differently? We should always require state to sign and throw an error if not.
-                        if account.is_signer.to_bool() {
-                            callback_account_metas.push(account.into());
-                            callback_account_infos.push(ctx.accounts.state.to_account_info());
-                            continue;
-                        } else {
-                            callback_account_metas.push(account.into());
-                            callback_account_infos.push(ctx.accounts.state.to_account_info());
-                            continue;
-                        }
-                    }
-
-                    let account_info = remaining_accounts.get(&account.pubkey).unwrap();
-
-                    callback_account_metas.push(account.into());
-                    callback_account_infos.push(account_info.clone());
+            for account in user_callback.accounts[..user_callback.accounts_len as usize].iter() {
+                if account.pubkey == ctx.accounts.payer.key() && account.is_writable == 1 {
+                    // TODO: handle this better
+                    continue;
                 }
 
-                callback_account_infos.push(ctx.accounts.callback_pid.clone());
+                if account.pubkey == ctx.accounts.enclave_signer.key() {
+                    // TODO: handle this better
+                    continue;
+                }
 
-                // drop the HashMap
+                if account.pubkey == ctx.accounts.request.key() {
+                    callback_account_metas.push(account.into());
+                    callback_account_infos.push(ctx.accounts.request.to_account_info());
+                    continue;
+                }
+
+                if account.pubkey == ctx.accounts.state.key() {
+                    // TODO: do we need to handle this differently? We should always require state to sign and throw an error if not.
+                    if account.is_signer.to_bool() {
+                        randomness_state_is_signer = true;
+                    }
+
+                    callback_account_metas.push(account.into());
+                    callback_account_infos.push(ctx.accounts.state.to_account_info());
+                    continue;
+                }
+
+                match remaining_accounts.get(&account.pubkey) {
+                    None => {
+                        msg!(
+                            "Failed to find account in remaining_accounts {}",
+                            account.pubkey
+                        );
+                        return Err(error!(RandomnessError::MissingCallbackAccount));
+                    }
+                    Some(account_info) => {
+                        callback_account_metas.push(account.into());
+                        callback_account_infos.push(account_info.clone());
+                    }
+                }
             }
+
+            callback_account_infos.push(ctx.accounts.callback_pid.clone());
+
+            // drop the HashMap
+            drop(remaining_accounts);
 
             let callback_data = [
                 user_callback.ix_data[..user_callback.ix_data_len as usize].to_vec(),
@@ -251,11 +263,6 @@ pub mod solana_randomness_service {
                 result.to_vec(),
             ]
             .concat();
-            msg!(
-                "callback_data ({}): {:?}",
-                callback_data.len(),
-                callback_data
-            );
 
             let callback_ix = Instruction {
                 program_id: user_callback.program_id,
@@ -263,18 +270,41 @@ pub mod solana_randomness_service {
                 accounts: callback_account_metas,
             };
 
-            // TODO: Why is this panicking and not catching the error?
-            match invoke_signed(
-                &callback_ix,
-                &callback_account_infos,
-                &[&[b"STATE", &[ctx.accounts.state.bump]]],
-            ) {
-                Err(e) => {
-                    msg!("Error invoking user callback: {:?}", e);
+            if randomness_state_is_signer {
+                msg!(
+                    "[Signed] Invoking the user's callback at program_id {}",
+                    user_callback.program_id
+                );
+
+                // TODO: Why is this panicking and not catching the error?
+                match invoke_signed(
+                    &callback_ix,
+                    &callback_account_infos,
+                    &[&[b"STATE", &[ctx.accounts.state.bump]]],
+                ) {
+                    Err(e) => {
+                        msg!("Error invoking user callback: {:?}", e);
+                    }
+                    Ok(_) => {
+                        msg!("Successfully invoked user callback");
+                        is_success = true;
+                    }
                 }
-                Ok(_) => {
-                    msg!("Successfully invoked user callback");
-                    is_success = true;
+            } else {
+                msg!(
+                    "Invoking the user's callback at program_id {}",
+                    user_callback.program_id
+                );
+
+                // TODO: Why is this panicking and not catching the error?
+                match invoke(&callback_ix, &callback_account_infos) {
+                    Err(e) => {
+                        msg!("Error invoking user callback: {:?}", e);
+                    }
+                    Ok(_) => {
+                        msg!("Successfully invoked user callback");
+                        is_success = true;
+                    }
                 }
             }
         }
@@ -469,4 +499,10 @@ pub struct Settle<'info> {
 
     /// CHECK: todo
     pub callback_pid: AccountInfo<'info>,
+
+    /// CHECK: todo
+    #[account(
+        address = SYSVAR_INSTRUCTIONS_ID,
+    )]
+    pub instructions_sysvar: AccountInfo<'info>,
 }

@@ -38,7 +38,7 @@ pub mod solana_randomness_consumer {
     }
 
     pub fn consume_randomness(
-        ctx: Context<ConsumeRandomness>,
+        _ctx: Context<ConsumeRandomness>,
         result: Vec<u8>,
     ) -> anchor_lang::prelude::Result<()> {
         msg!("Randomness received: {:?}", result);

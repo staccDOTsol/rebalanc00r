@@ -1,42 +1,5 @@
 use crate::*;
 
-// #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize, InitSpace)]
-// pub struct CallbackBorsh {
-//     /// The program ID of the callback program being invoked.
-//     pub program_id: Pubkey,
-//     /// The accounts being used in the callback instruction.
-//     #[max_len(32)]
-//     pub accounts: Vec<AccountMetaBorsh>,
-//     /// The serialized instruction data.
-//     #[max_len(1024)]
-//     pub ix_data: Vec<u8>,
-// }
-
-// #[derive(Debug, Clone, Copy, Default, AnchorSerialize, AnchorDeserialize, InitSpace)]
-// pub struct AccountMetaBorsh {
-//     pub pubkey: Pubkey,
-//     pub is_signer: bool,
-//     pub is_writable: bool,
-// }
-// impl From<AccountMetaBorsh> for anchor_lang::prelude::AccountMeta {
-//     fn from(item: AccountMetaBorsh) -> Self {
-//         Self {
-//             pubkey: item.pubkey,
-//             is_signer: item.is_signer,
-//             is_writable: item.is_writable,
-//         }
-//     }
-// }
-// impl From<&AccountMetaBorsh> for anchor_lang::prelude::AccountMeta {
-//     fn from(item: &AccountMetaBorsh) -> Self {
-//         Self {
-//             pubkey: item.pubkey,
-//             is_signer: item.is_signer,
-//             is_writable: item.is_writable,
-//         }
-//     }
-// }
-
 #[zero_copy(unsafe)]
 #[derive(Debug)]
 #[repr(packed)]

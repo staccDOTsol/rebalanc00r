@@ -10,14 +10,8 @@ pub struct SolanaServiceEnvironment {
     #[serde(default = "default_cluster")]
     pub cluster: String,
 
-    pub service_key: String,
-    #[serde(default)]
-    pub service_authority_key: String,
-
-    #[serde(default)]
-    pub function_key: String,
-    #[serde(default)]
-    pub function_authority_key: String,
+    /// The FunctionServiceAccount base58 pubkey.
+    pub service_key: Pubkey,
 
     // @dev We dont use these actually and pull from std::env::var when posting to IPFS. This is here just for verification early on in the startup process.
     // Required to post a quote for verification
