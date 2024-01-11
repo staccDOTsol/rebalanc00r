@@ -95,7 +95,7 @@ dotenv.config();
     );
 
     const tx = await randomnessService.methods
-      .initialize(new anchor.BN(10_000))
+      .initialize(new anchor.BN(1_000))
       .accounts({
         state: programStatePubkey,
         wallet: anchor.utils.token.associatedAddress({
