@@ -35,8 +35,11 @@ url = "https://api.devnet.solana.com"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
-[[test.validator.clone]]
-address = "FXUv1NMyzr11hG5kCpaWp6WiHJr5qvkVFcsnB7vjcFix"
+[[test.validator.clone]] # sb devnet attestation programID
+address = "sbattyXrzedoNATfc4L31wC9Mhxsi1BmFhTiN8gDshx"
 
-[[test.validator.clone]]
-address = "8qDeqDTqfdQWAriqVhVXxJggC4vQBzd86N3GsHwC59te"
+[[test.validator.clone]] # sb devnet attestation IDL
+address = "5ExuoQR69trmKQfB95fDsUGsUrrChbGq9PFgt8qouncz"
+
+[[test.validator.clone]] # sb devnet attestation State
+address = "5MFs7RGTjLi1wtKNBFRtuLipCkkjs4YQwRRU9sjnbQbS"
