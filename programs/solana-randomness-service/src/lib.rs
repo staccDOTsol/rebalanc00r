@@ -28,7 +28,7 @@ pub use state::*;
 pub mod utils;
 pub use utils::*;
 
-declare_id!("iNGJrcKxT9jqVtJFdVP5HjRjWELs9YwDeMtGiNgRYvP");
+declare_id!("G5vdtg8Wj9fMPt9tfguwUh6tKEYR2H3RoVvqCdKt1c7r");
 
 pub use types::{AccountMetaBorsh, Callback};
 

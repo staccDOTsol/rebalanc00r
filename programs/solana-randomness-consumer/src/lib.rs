@@ -2,7 +2,7 @@ use solana_randomness_service::{program::SolanaRandomnessService, RandomnessRequ
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
 
-declare_id!("Hr6JXoRxucdbQ4VpZERpHhsopiFjTiXLvRcyn6Fzvsih");
+declare_id!("2kTqhuxppaBCod6s7g5P6LfD1Jepm86qMCVg4XX1R88W");
 
 #[program]
 pub mod solana_randomness_consumer {

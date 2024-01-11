@@ -5,8 +5,8 @@ seeds = true
 skip-lint = false
 
 [programs.devnet]
-solana_randomness_consumer = "Hr6JXoRxucdbQ4VpZERpHhsopiFjTiXLvRcyn6Fzvsih"
-solana_randomness_service = "iNGJrcKxT9jqVtJFdVP5HjRjWELs9YwDeMtGiNgRYvP"
+solana_randomness_consumer = "2kTqhuxppaBCod6s7g5P6LfD1Jepm86qMCVg4XX1R88W"
+solana_randomness_service = "G5vdtg8Wj9fMPt9tfguwUh6tKEYR2H3RoVvqCdKt1c7r"
 
 [programs.localnet]
 solana_randomness_consumer = "Hr6JXoRxucdbQ4VpZERpHhsopiFjTiXLvRcyn6Fzvsih"
@@ -18,7 +18,6 @@ url = "https://api.apr.dev"
 [provider]
 cluster = "Localnet"
 wallet = "/Users/gally/.config/solana/id.json"
-# wallet = "~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
 
 [scripts]
 initialize = "tsx ./scripts/initialize.ts"
