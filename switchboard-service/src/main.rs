@@ -23,7 +23,7 @@ pub mod task;
 pub use task::*;
 
 pub use solana_randomness_service::{
-    Callback, CallbackZC, RandomnessRequest, RandomnessRequested,
+    Callback, CallbackZC, RandomnessRequest, RandomnessRequestedEvent,
     Settle as RandomnessServiceSettle, ID as RandomnessServiceID,
 };
 

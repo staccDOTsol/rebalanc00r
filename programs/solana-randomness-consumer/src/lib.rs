@@ -1,8 +1,10 @@
-use solana_randomness_service::{program::SolanaRandomnessService, RandomnessRequest};
+use solana_randomness_service::{
+    program::SolanaRandomnessService, RandomnessRequest, ID as SolanaRandomnessServiceID,
+};
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
 
-declare_id!("2kTqhuxppaBCod6s7g5P6LfD1Jepm86qMCVg4XX1R88W");
+declare_id!("9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q");
 
 #[program]
 pub mod solana_randomness_consumer {
@@ -11,22 +13,30 @@ pub mod solana_randomness_consumer {
     pub fn request_randomness(ctx: Context<RequestRandomness>) -> anchor_lang::prelude::Result<()> {
         msg!("Requesting randomness...");
 
-        RequestRandomness::request_randomness(
-            &ctx,
-            8,
+        // Call the randomness service and request a new value
+        solana_randomness_service::cpi::request(
+            CpiContext::new(
+                ctx.accounts.randomness_service.to_account_info(),
+                solana_randomness_service::cpi::accounts::Request {
+                    request: ctx.accounts.randomness_request.to_account_info(),
+                    escrow: ctx.accounts.randomness_escrow.to_account_info(),
+                    state: ctx.accounts.randomness_state.to_account_info(),
+                    mint: ctx.accounts.randomness_mint.to_account_info(),
+                    payer: ctx.accounts.payer.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                    token_program: ctx.accounts.token_program.to_account_info(),
+                    associated_token_program: ctx
+                        .accounts
+                        .associated_token_program
+                        .to_account_info(),
+                },
+            ),
+            8, // Request 8 bytes of randomness
             solana_randomness_service::types::Callback {
                 program_id: ID,
                 accounts: vec![
-                    solana_randomness_service::types::AccountMetaBorsh {
-                        pubkey: ctx.accounts.randomness_state.key(),
-                        is_signer: true,
-                        is_writable: false,
-                    },
-                    solana_randomness_service::types::AccountMetaBorsh {
-                        pubkey: ctx.accounts.randomness_request.key(),
-                        is_signer: false,
-                        is_writable: false,
-                    },
+                    AccountMeta::new_readonly(ctx.accounts.randomness_state.key(), true).into(),
+                    AccountMeta::new_readonly(ctx.accounts.randomness_request.key(), false).into(),
                 ],
                 ix_data: get_ixn_discriminator("consume_randomness").to_vec(), // TODO: hardcode this discriminator
             },
@@ -106,65 +116,10 @@ pub struct ConsumeRandomness<'info> {
     #[account(
         signer,
         seeds = [b"STATE"],
-        seeds::program = solana_randomness_service::ID,
+        seeds::program = SolanaRandomnessServiceID,
         bump = randomness_state.bump,
     )]
     pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,
 
     pub request: Box<Account<'info, RandomnessRequest>>,
-}
-
-impl<'info> RequestRandomness<'info> {
-    /// Requests randomness from the Solana Randomness Service.
-    ///
-    /// This method is programatically added to the struct decorated with `#[request_randomness]` and
-    /// encapsulates the logic required to invoke the Cross Program Invokation (CPI) to the Switchboard Randomness Service.
-    ///
-    /// # Arguments
-    /// * `ctx` - A reference to the context holding the account information.
-    /// * `num_bytes` - The number of bytes of randomness to request.
-    /// * `callback` - A callback function to handle the randomness once it's available.
-    ///
-    /// # Returns
-    /// This method returns a `ProgramResult`. On success, it indicates that the randomness request
-    /// has been successfully initiated. Any errors during the process are also encapsulated within the `ProgramResult`.
-    ///
-    /// # Example
-    /// ```
-    /// let result = MyStruct::request_randomness(&context, 32, callback_function);
-    ///
-    /// match result {
-    ///     Ok(_) => println!("Randomness requested successfully"),
-    ///     Err(e) => println!("Error invoking randomness request: {:?}", e),
-    /// }
-    /// ```
-    pub fn request_randomness(
-        ctx: &Context<RequestRandomness<'info>>,
-        num_bytes: u32,
-        callback: solana_randomness_service::types::Callback,
-    ) -> ProgramResult {
-        // Call the randomness service and request a new value
-        solana_randomness_service::cpi::request(
-            CpiContext::new(
-                ctx.accounts.randomness_service.to_account_info(),
-                solana_randomness_service::cpi::accounts::Request {
-                    request: ctx.accounts.randomness_request.to_account_info(),
-                    escrow: ctx.accounts.randomness_escrow.to_account_info(),
-                    state: ctx.accounts.randomness_state.to_account_info(),
-                    mint: ctx.accounts.randomness_mint.to_account_info(),
-                    payer: ctx.accounts.payer.to_account_info(),
-                    system_program: ctx.accounts.system_program.to_account_info(),
-                    token_program: ctx.accounts.token_program.to_account_info(),
-                    associated_token_program: ctx
-                        .accounts
-                        .associated_token_program
-                        .to_account_info(),
-                },
-            ),
-            num_bytes,
-            callback,
-        )?;
-
-        Ok(())
-    }
 }

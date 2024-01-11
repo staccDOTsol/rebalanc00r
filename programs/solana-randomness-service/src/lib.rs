@@ -5,17 +5,6 @@ pub use solana_program::sysvar::instructions::ID as SYSVAR_INSTRUCTIONS_ID;
 pub use std::collections::HashMap;
 pub use switchboard_solana::prelude::NativeMint;
 
-pub mod macros;
-pub use macros::*;
-
-// SDK is intended for off-chain use functionality like client fetching
-#[cfg(not(target_os = "solana"))]
-#[cfg_attr(doc_cfg, doc(cfg(not(target_os = "solana"))))]
-mod sdk;
-#[cfg(not(target_os = "solana"))]
-#[cfg_attr(doc_cfg, doc(cfg(not(target_os = "solana"))))]
-pub use sdk::*;
-
 pub mod types;
 pub use types::*;
 
@@ -28,29 +17,44 @@ pub use state::*;
 pub mod utils;
 pub use utils::*;
 
-declare_id!("G5vdtg8Wj9fMPt9tfguwUh6tKEYR2H3RoVvqCdKt1c7r");
+declare_id!("RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA");
 
 pub use types::{AccountMetaBorsh, Callback};
 
 // We will listen to this event inside of our service
 #[event]
 #[derive(Debug, Clone)]
-pub struct RandomnessRequested {
+pub struct RandomnessRequestedEvent {
     #[index]
-    pub request: Pubkey,
+    pub callback_pid: Pubkey,
+    #[index]
     pub user: Pubkey,
+    pub request: Pubkey,
     pub callback: Callback,
-    pub num_bytes: u32,
+    pub num_bytes: u8,
 }
 
 #[event]
 #[derive(Debug, Clone)]
-pub struct RandomnessFulfilled {
+pub struct RandomnessFulfilledEvent {
     #[index]
-    pub request: Pubkey,
+    pub callback_pid: Pubkey,
+    #[index]
     pub user: Pubkey,
+    pub request: Pubkey,
     pub is_success: bool,
     pub randomness: Vec<u8>,
+}
+
+#[event]
+#[derive(Debug, Clone)]
+pub struct UserCallbackFailedEvent {
+    #[index]
+    pub callback_pid: Pubkey,
+    #[index]
+    pub user: Pubkey,
+    pub request: Pubkey,
+    pub error_message: String,
 }
 
 #[program]
@@ -60,6 +64,11 @@ pub mod solana_randomness_service {
 
     use super::*;
 
+    /// Initializes the program state and sets the:
+    /// - program authority
+    /// - Switchboard service that is used to fulfill requests
+    /// - The cost per randomness byte, in addition to 5000 lamports for the txn fee
+    /// - The wallet that will accrue rewards for fulfilling randomness
     pub fn initialize(
         ctx: Context<Initialize>,
         cost_per_byte: u64,
@@ -74,6 +83,7 @@ pub mod solana_randomness_service {
         Ok(())
     }
 
+    /// Sets the fees for requesting randomness
     pub fn set_fees(
         ctx: Context<SetFeeConfig>,
         cost_per_byte: u64,
@@ -86,9 +96,19 @@ pub mod solana_randomness_service {
         Ok(())
     }
 
+    /// Sets the Switchboard service that will be used to fulfill requests.
+    pub fn set_switchboard_service(
+        ctx: Context<SetSwitchboardService>,
+    ) -> anchor_lang::prelude::Result<()> {
+        ctx.accounts.state.switchboard_service = ctx.accounts.switchboard_service.key();
+
+        Ok(())
+    }
+
+    /// Request randomness from the Switchboard service.
     pub fn request(
         ctx: Context<Request>,
-        num_bytes: u32,
+        num_bytes: u8,
         callback: Callback,
     ) -> anchor_lang::prelude::Result<()> {
         // TODO: Add the ability to specify the priority fees on the response txn. Need to inspect txns to verify priority fees were attached.
@@ -100,8 +120,35 @@ pub mod solana_randomness_service {
             return Err(error!(RandomnessError::OverflowNumBytes));
         }
 
-        // TODO: Inspect the callback and ensure no other signers will be required
-        // for account in callback.accounts.iter() {}
+        // Inspect the callback and ensure:
+        // - State PDA is required as a signer
+        // - no other signers will be required
+        let mut num_signers = 0;
+        let mut has_randomness_state_signer = false;
+        for account in callback.accounts.iter() {
+            if account.pubkey == ctx.accounts.state.key() {
+                if !account.is_signer {
+                    msg!("Randomness state must be a signer to validate the request");
+                    return Err(error!(RandomnessError::InvalidCallback));
+                }
+
+                has_randomness_state_signer = true;
+            }
+
+            if account.is_signer {
+                num_signers += 1;
+            }
+        }
+
+        if !has_randomness_state_signer {
+            msg!("Randomness state must be provided as a signer to validate the request");
+            return Err(error!(RandomnessError::InvalidCallback));
+        }
+
+        if num_signers > 0 {
+            msg!("Randomness callback must not require any signers other than the state account");
+            return Err(error!(RandomnessError::InvalidCallback));
+        }
 
         let request_account_info = ctx.accounts.request.to_account_info();
 
@@ -140,9 +187,10 @@ pub mod solana_randomness_service {
             )?;
         }
 
-        emit!(RandomnessRequested {
-            request: ctx.accounts.request.key(),
+        emit!(RandomnessRequestedEvent {
+            callback_pid: callback.program_id,
             user: ctx.accounts.payer.key(),
+            request: ctx.accounts.request.key(),
             callback,
             num_bytes,
         });
@@ -150,6 +198,7 @@ pub mod solana_randomness_service {
         Ok(())
     }
 
+    /// Settles a randomness request and invokes the user's callback.
     pub fn settle<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, Settle<'info>>,
         result: Vec<u8>,
@@ -210,8 +259,6 @@ pub mod solana_randomness_service {
                 .map(|a| (a.key(), a.clone()))
                 .collect();
 
-            let mut randomness_state_is_signer = false;
-
             for account in user_callback.accounts[..user_callback.accounts.len()].iter() {
                 if account.pubkey == ctx.accounts.payer.key() && account.is_writable {
                     // TODO: handle this better
@@ -230,9 +277,8 @@ pub mod solana_randomness_service {
                 }
 
                 if account.pubkey == ctx.accounts.state.key() {
-                    // TODO: do we need to handle this differently? We should always require state to sign and throw an error if not.
-                    if account.is_signer {
-                        randomness_state_is_signer = true;
+                    if !account.is_signer {
+                        return Err(error!(RandomnessError::InvalidCallback));
                     }
 
                     callback_account_metas.push(account.into());
@@ -273,41 +319,20 @@ pub mod solana_randomness_service {
                 accounts: callback_account_metas,
             };
 
-            if randomness_state_is_signer {
-                msg!(
-                    "[Signed] Invoking the user's callback at program_id {}",
-                    user_callback.program_id
-                );
+            msg!(">>> Invoking user callback <<<");
 
-                // TODO: Why is this panicking and not catching the error?
-                match invoke_signed(
-                    &callback_ix,
-                    &callback_account_infos,
-                    &[&[b"STATE", &[ctx.accounts.state.bump]]],
-                ) {
-                    Err(e) => {
-                        msg!("Error invoking user callback: {:?}", e);
-                    }
-                    Ok(_) => {
-                        msg!("Successfully invoked user callback");
-                        is_success = true;
-                    }
+            // TODO: Why is this panicking and not catching the error?
+            match invoke_signed(
+                &callback_ix,
+                &callback_account_infos,
+                &[&[b"STATE", &[ctx.accounts.state.bump]]],
+            ) {
+                Err(e) => {
+                    msg!("Error invoking user callback: {:?}", e);
                 }
-            } else {
-                msg!(
-                    "Invoking the user's callback at program_id {}",
-                    user_callback.program_id
-                );
-
-                // TODO: Why is this panicking and not catching the error?
-                match invoke(&callback_ix, &callback_account_infos) {
-                    Err(e) => {
-                        msg!("Error invoking user callback: {:?}", e);
-                    }
-                    Ok(_) => {
-                        msg!("Successfully invoked user callback");
-                        is_success = true;
-                    }
+                Ok(_) => {
+                    msg!("Successfully invoked user callback");
+                    is_success = true;
                 }
             }
         }
@@ -327,12 +352,71 @@ pub mod solana_randomness_service {
             &[&[b"STATE", &[ctx.accounts.state.bump]]],
         ))?;
 
-        emit!(RandomnessFulfilled {
+        emit!(RandomnessFulfilledEvent {
+            callback_pid: ctx.accounts.callback_pid.key(),
             request: ctx.accounts.request.key(),
             user: ctx.accounts.user.key(),
             is_success,
             randomness: result.clone(),
         });
+
+        Ok(())
+    }
+
+    pub fn user_callback_failed<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, UserCallbackFailed<'info>>,
+        error_message: String,
+    ) -> anchor_lang::prelude::Result<()> {
+        // Verify this method was not called from a CPI
+        assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
+
+        if error_message.len() > 512 {
+            return Err(error!(RandomnessError::MissingNumBytes));
+        }
+
+        // Transfer reward (all funds) to the program_state
+        let cost = ctx
+            .accounts
+            .state
+            .request_cost(ctx.accounts.request.num_bytes);
+        msg!("cost: {:?}", cost);
+
+        // verify the escrow has enough funds
+        if cost > ctx.accounts.escrow.amount {
+            return Err(error!(RandomnessError::InsufficientFunds));
+        }
+
+        if ctx.accounts.escrow.amount > 0 {
+            msg!("transferrring {:?} to wallet", ctx.accounts.escrow.amount);
+            transfer(
+                &ctx.accounts.token_program.to_account_info(),
+                &ctx.accounts.escrow,
+                &ctx.accounts.wallet,
+                &ctx.accounts.state.to_account_info(),
+                &[&[b"STATE", &[ctx.accounts.state.bump]]],
+                ctx.accounts.escrow.amount,
+            )?;
+        }
+
+        ctx.accounts.request.error_message = error_message.clone();
+
+        Ok(())
+    }
+
+    /// Allows the user to close the request after acknowledging the error message.
+    pub fn close_request<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, CloseRequest<'info>>,
+    ) -> anchor_lang::prelude::Result<()> {
+        // Close the token account
+        anchor_spl::token::close_account(CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            CloseAccount {
+                account: ctx.accounts.escrow.to_account_info(),
+                destination: ctx.accounts.user.to_account_info(),
+                authority: ctx.accounts.state.to_account_info(),
+            },
+            &[&[b"STATE", &[ctx.accounts.state.bump]]],
+        ))?;
 
         Ok(())
     }
@@ -344,6 +428,9 @@ pub mod solana_randomness_service {
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
     #[account(
         init,
         payer = payer,
@@ -352,8 +439,6 @@ pub struct Initialize<'info> {
         bump,
     )]
     pub state: Box<Account<'info, State>>,
-
-    pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
 
     #[account(
         init,
@@ -366,8 +451,12 @@ pub struct Initialize<'info> {
     #[account(address = NativeMint::ID)]
     pub mint: Account<'info, Mint>,
 
-    #[account(mut)]
-    pub payer: Signer<'info>,
+    #[account(
+        constraint = switchboard_function.load()?.services_disabled.is_disabled() &&
+            switchboard_service.function == switchboard_function.key()
+    )]
+    pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
+    pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
 
     pub system_program: Program<'info, System>,
 
@@ -387,6 +476,26 @@ pub struct SetFeeConfig<'info> {
     pub state: Box<Account<'info, State>>,
 
     pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetSwitchboardService<'info> {
+    #[account(
+        mut,
+        seeds = [b"STATE"],
+        bump = state.bump,
+        has_one = authority,
+    )]
+    pub state: Box<Account<'info, State>>,
+
+    pub authority: Signer<'info>,
+
+    #[account(
+        constraint = switchboard_function.load()?.services_disabled.is_disabled() &&
+            switchboard_service.function == switchboard_function.key()
+    )]
+    pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
+    pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
 }
 
 /////////////////////////////////////////////////////////////
@@ -507,4 +616,105 @@ pub struct Settle<'info> {
         address = SYSVAR_INSTRUCTIONS_ID,
     )]
     pub instructions_sysvar: AccountInfo<'info>,
+}
+
+/////////////////////////////////////////////////////////////
+/// Callback Failed
+/////////////////////////////////////////////////////////////
+#[derive(Accounts)]
+pub struct UserCallbackFailed<'info> {
+    #[account(
+        mut,
+        constraint = request.is_completed == 0 @ RandomnessError::RequestAlreadyCompleted,
+        has_one = escrow,
+    )]
+    pub request: Box<Account<'info, RandomnessRequest>>,
+
+    #[account(
+        mut,
+        // escrow::mint = mint,
+        constraint = escrow.is_native() && escrow.owner == state.key(),
+    )]
+    pub escrow: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [b"STATE"],
+        bump = state.bump,
+        has_one = wallet,
+        has_one = switchboard_service,
+    )]
+    pub state: Box<Account<'info, State>>,
+
+    #[account(
+        mut,
+        constraint = wallet.is_native() && wallet.owner == state.key(),
+    )]
+    pub wallet: Box<Account<'info, TokenAccount>>,
+
+    // SWITCHBOARD VALIDATION
+    #[account(
+        constraint = switchboard_function.load()?.validate_service(
+            &switchboard_service,
+            &enclave_signer.to_account_info(),
+        )?
+    )]
+    pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
+    #[account(
+        constraint = switchboard_service.function == switchboard_function.key()
+    )]
+    pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
+
+    pub enclave_signer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    pub token_program: Program<'info, Token>,
+
+    /// CHECK: todo
+    #[account(
+        address = SYSVAR_INSTRUCTIONS_ID,
+    )]
+    pub instructions_sysvar: AccountInfo<'info>,
+}
+
+/////////////////////////////////////////////////////////////
+/// Close Request
+/////////////////////////////////////////////////////////////
+#[derive(Accounts)]
+pub struct CloseRequest<'info> {
+    /// CHECK: should we require them to sign or allow anyone to close?
+    #[account(mut)]
+    pub user: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        close = user,
+        has_one = user,
+        has_one = escrow,
+        constraint = request.is_completed == 1 @ RandomnessError::RequestStillActive,
+    )]
+    pub request: Box<Account<'info, RandomnessRequest>>,
+
+    #[account(
+        mut,
+        constraint = escrow.is_native() && escrow.owner == state.key(),
+    )]
+    pub escrow: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [b"STATE"],
+        bump = state.bump,
+        has_one = wallet,
+    )]
+    pub state: Box<Account<'info, State>>,
+
+    #[account(
+        mut,
+        constraint = wallet.is_native() && wallet.owner == state.key(),
+    )]
+    pub wallet: Box<Account<'info, TokenAccount>>,
+
+    pub system_program: Program<'info, System>,
+
+    pub token_program: Program<'info, Token>,
 }

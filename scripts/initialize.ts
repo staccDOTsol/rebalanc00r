@@ -90,7 +90,8 @@ dotenv.config();
       "env",
     ]);
 
-    const servicePubkey = new anchor.web3.PublicKey(
+    const [serviceAccount, serviceState] = await FunctionServiceAccount.load(
+      switchboard,
       process.env.SWITCHBOARD_SERVICE_PUBKEY
     );
 
@@ -103,7 +104,8 @@ dotenv.config();
           owner: programStatePubkey,
         }),
         mint: nativeMint,
-        switchboardService: servicePubkey,
+        switchboardFunction: serviceState.function,
+        switchboardService: serviceAccount.publicKey,
       })
       .rpc();
 

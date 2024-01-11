@@ -3939,7 +3939,6 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "bytemuck",
- "solana-randomness-service-macros",
  "switchboard-solana",
 ]
 

@@ -508,9 +508,9 @@ impl SolanaService {
 
                             match discriminator {
                                 // request
-                                RandomnessRequested::DISCRIMINATOR => {
+                                RandomnessRequestedEvent::DISCRIMINATOR => {
                                     if let Ok(event) =
-                                        RandomnessRequested::try_from_slice(&decoded[8..])
+                                        RandomnessRequestedEvent::try_from_slice(&decoded[8..])
                                     {
                                         self.handle_randomness_requested_event(event).await;
                                     }
@@ -545,7 +545,7 @@ impl SolanaService {
         }
     }
 
-    async fn handle_randomness_requested_event(&self, event: RandomnessRequested) {
+    async fn handle_randomness_requested_event(&self, event: RandomnessRequestedEvent) {
         debug!("[EVENT][REQUEST] {:#?}", event);
 
         // // Check if in_flight_requests contains the request id

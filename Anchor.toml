@@ -5,12 +5,12 @@ seeds = true
 skip-lint = false
 
 [programs.devnet]
-solana_randomness_consumer = "2kTqhuxppaBCod6s7g5P6LfD1Jepm86qMCVg4XX1R88W"
-solana_randomness_service = "G5vdtg8Wj9fMPt9tfguwUh6tKEYR2H3RoVvqCdKt1c7r"
+solana_randomness_consumer = "9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q"
+solana_randomness_service = "RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA"
 
 [programs.localnet]
 solana_randomness_consumer = "2kTqhuxppaBCod6s7g5P6LfD1Jepm86qMCVg4XX1R88W"
-solana_randomness_service = "G5vdtg8Wj9fMPt9tfguwUh6tKEYR2H3RoVvqCdKt1c7r"
+solana_randomness_service = "RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA"
 
 [registry]
 url = "https://api.apr.dev"
@@ -35,11 +35,11 @@ url = "https://api.devnet.solana.com"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 
-[[test.validator.clone]] # sb devnet attestation programID
+[[test.validator.clone]]
 address = "sbattyXrzedoNATfc4L31wC9Mhxsi1BmFhTiN8gDshx"
 
-[[test.validator.clone]] # sb devnet attestation IDL
+[[test.validator.clone]]
 address = "5ExuoQR69trmKQfB95fDsUGsUrrChbGq9PFgt8qouncz"
 
-[[test.validator.clone]] # sb devnet attestation State
+[[test.validator.clone]]
 address = "5MFs7RGTjLi1wtKNBFRtuLipCkkjs4YQwRRU9sjnbQbS"

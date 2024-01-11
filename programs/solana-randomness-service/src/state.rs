@@ -32,9 +32,9 @@ impl State {
         8 + State::INIT_SPACE
     }
 
-    pub fn request_cost(&self, num_bytes: u32) -> u64 {
+    pub fn request_cost(&self, num_bytes: u8) -> u64 {
         // @DEV - here we can add some lamports if we want to hardcode a priority fee.
-        5000 + (self.cost_per_byte * num_bytes as u64)
+        5000u64 + (self.cost_per_byte * u64::from(num_bytes))
     }
 }
 
@@ -43,17 +43,24 @@ impl State {
 #[account]
 #[derive(Debug, Default, InitSpace)]
 pub struct RandomnessRequest {
+    /// Flag for determining whether the request has been completed.
+    pub is_completed: u8,
+    pub num_bytes: u8,
     pub user: Pubkey,
+    pub escrow: Pubkey,
     pub request_slot: u64,
-    pub num_bytes: u32,
     pub callback: Callback,
+    #[max_len(512)]
+    pub error_message: String,
 }
 impl RandomnessRequest {
     pub fn space(callback: &Callback) -> usize {
         let base: usize = 8  // discriminator
             + solana_program::borsh0_10::get_instance_packed_len(Box::<RandomnessRequest>::default().as_ref()).unwrap();
 
-        base + (callback.ix_data.len())
-            + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len())
+        base
+        + (callback.ix_data.len()) // callback ix data len
+        + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len()) // callback accounts len
+        + (512) // error message
     }
 }

@@ -158,7 +158,8 @@ export async function getOrCreateRandomnessServiceState(
           owner: programStatePubkey,
         }),
         mint: nativeMint,
-        switchboardService: switchboardServicePubkey,
+        switchboardService: servicePubkey,
+        // switchboardFunction:
       })
       .rpc();
 

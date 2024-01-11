@@ -15,7 +15,7 @@ const REQUEST_ACCOUNT_DOESNT_EXIST_ERROR_STR: &str = "Program log: AnchorError c
 pub struct CompiledTask {
     pub request: Pubkey,
     pub user: Pubkey,
-    pub num_bytes: u32,
+    pub num_bytes: u8,
     pub callback: Callback,
     pub randomness_bytes: Vec<u8>,
 }
@@ -342,7 +342,7 @@ impl CompiledTaskBatch {
 pub struct RandomnessTask {
     pub request: Pubkey,
     pub user: Pubkey,
-    pub num_bytes: u32,
+    pub num_bytes: u8,
     pub callback: Callback,
 }
 impl RandomnessTask {

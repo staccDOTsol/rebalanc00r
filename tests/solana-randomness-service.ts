@@ -9,7 +9,7 @@ import type { SolanaRandomnessService } from "../target/types/solana_randomness_
 
 import type { Program } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
-import { BN, jsonReplacers, sleep } from "@switchboard-xyz/common";
+import { BN, sleep } from "@switchboard-xyz/common";
 import type { SwitchboardProgram } from "@switchboard-xyz/solana.js";
 import { assert } from "chai";
 
@@ -108,7 +108,7 @@ describe("Solana Randomness Service", () => {
 
       const [event, slot] = await runAndAwaitEvent(
         randomnessService,
-        "RandomnessRequested",
+        "RandomnessRequestedEvent",
         consumerProgram.methods
           .requestRandomness()
           .accounts({
