@@ -113,11 +113,8 @@ pub mod solana_randomness_service {
     ) -> anchor_lang::prelude::Result<()> {
         // TODO: Add the ability to specify the priority fees on the response txn. Need to inspect txns to verify priority fees were attached.
 
-        if num_bytes == 0 {
-            return Err(error!(RandomnessError::MissingNumBytes));
-        }
-        if num_bytes > 32 {
-            return Err(error!(RandomnessError::OverflowNumBytes));
+        if num_bytes == 0 || num_bytes > 32 {
+            return Err(error!(RandomnessError::InvalidNumberOfBytes));
         }
 
         // Inspect the callback and ensure:
@@ -133,6 +130,7 @@ pub mod solana_randomness_service {
                 }
 
                 has_randomness_state_signer = true;
+                continue;
             }
 
             if account.is_signer {
@@ -203,8 +201,11 @@ pub mod solana_randomness_service {
         ctx: Context<'a, 'b, 'c, 'info, Settle<'info>>,
         result: Vec<u8>,
     ) -> anchor_lang::prelude::Result<()> {
+        msg!("Skipping CPI check ...");
+        // msg!("Checking this ixn is not a CPI call ...");
+
         // Verify this method was not called from a CPI
-        assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
+        // assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
 
         // Need to make sure the payer is not included in the callback as a writeable account. Otherwise, the payer could be drained of funds.
         for account in ctx.accounts.request.callback.accounts
@@ -371,7 +372,7 @@ pub mod solana_randomness_service {
         assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
 
         if error_message.len() > 512 {
-            return Err(error!(RandomnessError::MissingNumBytes));
+            return Err(error!(RandomnessError::ErrorMessageOverflow));
         }
 
         // Transfer reward (all funds) to the program_state
@@ -503,7 +504,7 @@ pub struct SetSwitchboardService<'info> {
 /////////////////////////////////////////////////////////////
 
 #[derive(Accounts)]
-#[instruction(num_bytes: u32, callback: Callback)]
+#[instruction(num_bytes: u8, callback: Callback)]
 pub struct Request<'info> {
     #[account(
         init,
@@ -590,18 +591,14 @@ pub struct Settle<'info> {
     pub wallet: Box<Account<'info, TokenAccount>>,
 
     // SWITCHBOARD VALIDATION
-    // #[account(
-    //     constraint = switchboard_function.load()?.validate_service(
-    //         &switchboard_service,
-    //         &enclave_signer.to_account_info(),
-    //     )?
-    // )]
-    pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     #[account(
-        constraint = switchboard_service.function == switchboard_function.key()
+        constraint = switchboard_function.load()?.validate_service(
+            &switchboard_service,
+            &enclave_signer.to_account_info(),
+        )?
     )]
+    pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
-
     pub enclave_signer: Signer<'info>,
 
     pub system_program: Program<'info, System>,

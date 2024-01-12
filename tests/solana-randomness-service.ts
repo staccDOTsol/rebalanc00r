@@ -10,7 +10,10 @@ import type { SolanaRandomnessService } from "../target/types/solana_randomness_
 import type { Program } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
 import { BN, sleep } from "@switchboard-xyz/common";
-import type { SwitchboardProgram } from "@switchboard-xyz/solana.js";
+import {
+  FunctionServiceAccount,
+  type SwitchboardProgram,
+} from "@switchboard-xyz/solana.js";
 import { assert } from "chai";
 
 describe("Solana Randomness Service", () => {
@@ -65,7 +68,13 @@ describe("Solana Randomness Service", () => {
       const tx = await randomnessService.methods
         .request(8, {
           programId: anchor.web3.PublicKey.default,
-          accounts: [],
+          accounts: [
+            {
+              pubkey: programStatePubkey,
+              isSigner: true,
+              isWritable: false,
+            },
+          ],
           ixData: Buffer.from([]),
         })
         .accounts({
@@ -134,76 +143,82 @@ describe("Solana Randomness Service", () => {
       );
     });
 
-    // it("consumes randomness and invokes callback", async () => {
-    //   const config = { commitment: "confirmed" } as const;
+    it("consumes randomness and invokes callback", async () => {
+      const config = { commitment: "confirmed" } as const;
 
-    //   const result = Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
+      const result = Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
 
-    //   const requestState =
-    //     await randomnessService.account.randomnessRequest.fetch(
-    //       request.publicKey
-    //     );
+      const requestState =
+        await randomnessService.account.randomnessRequest.fetch(
+          request.publicKey
+        );
 
-    //   console.log(`Request: ${request.publicKey}`);
+      const [sbServiceAccount, sbServiceState] =
+        await FunctionServiceAccount.load(switchboard, switchboardService);
+      console.log(
+        "enclaveSigner",
+        sbServiceState.enclave.enclaveSigner.toBase58()
+      );
 
-    //   const settleIx = await randomnessService.methods
-    //     .settle(result)
-    //     .accounts({
-    //       request: request.publicKey,
-    //       escrow: anchor.utils.token.associatedAddress({
-    //         mint: nativeMint,
-    //         owner: request.publicKey,
-    //       }),
-    //       state: programStatePubkey,
-    //       wallet: anchor.utils.token.associatedAddress({
-    //         mint: nativeMint,
-    //         owner: programStatePubkey,
-    //       }),
-    //       callbackPid: requestState.callback.programId,
+      const remainingAccounts: anchor.web3.AccountMeta[] = [];
 
-    //       switchboardFunction: SWITCHBOARD_FUNCTION_PUBKEY,
-    //       switchboardService: SWITCHBOARD_SERVICE_PUBKEY,
-    //     })
-    //     .instruction()
-    //     .catch((e) => {
-    //       console.error(e);
-    //       throw e;
-    //     });
+      for (const account of requestState.callback.accounts) {
+        if (account.pubkey.equals(request.publicKey)) {
+          continue;
+        }
+        if (account.pubkey.equals(programStatePubkey)) {
+          continue;
+        }
+        remainingAccounts.push({
+          pubkey: account.pubkey,
+          isSigner: Boolean(account.isSigner),
+          isWritable: Boolean(account.isWritable),
+        });
+      }
 
-    //   for (const account of requestState.callback.accounts) {
-    //     if (!account.pubkey.equals(request.publicKey)) {
-    //       continue;
-    //     }
-    //     if (!account.pubkey.equals(programStatePubkey)) {
-    //       continue;
-    //     }
-    //     settleIx.keys.push({
-    //       pubkey: account.pubkey,
-    //       isSigner: Boolean(account.isSigner),
-    //       isWritable: Boolean(account.isWritable),
-    //     });
-    //   }
+      const signature = await randomnessService.methods
+        .settle(result)
+        .accounts({
+          request: request.publicKey,
+          escrow: anchor.utils.token.associatedAddress({
+            mint: nativeMint,
+            owner: request.publicKey,
+          }),
+          state: programStatePubkey,
+          wallet: anchor.utils.token.associatedAddress({
+            mint: nativeMint,
+            owner: programStatePubkey,
+          }),
+          callbackPid: requestState.callback.programId,
 
-    //   const tx = new anchor.web3.Transaction({
-    //     ...(await randomnessService.provider.connection.getLatestBlockhash()),
-    //   });
-    //   tx.add(settleIx);
+          switchboardFunction: switchboardFunction,
+          switchboardService: switchboardService,
+          // enclaveSigner: sbServiceState.enclave.enclaveSigner,
 
-    //   const signature = await randomnessService.provider
-    //     .sendAndConfirm(tx, undefined, { ...config, skipPreflight: true })
-    //     .catch((e) => {
-    //       console.error(e);
-    //       throw e;
-    //     });
+          instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        })
+        .remainingAccounts(remainingAccounts)
+        .rpc(config)
+        .catch((e) => {
+          console.error(e);
+          throw e;
+        });
 
-    //   console.log("[TX] settle", signature);
+      // const signature = await randomnessService.provider
+      //   .sendAndConfirm(tx, undefined, { ...config, skipPreflight: true })
+      //   .catch((e) => {
+      //     console.error(e);
+      //     throw e;
+      //   });
 
-    //   await printLogs(
-    //     randomnessService.provider.connection,
-    //     signature,
-    //     false,
-    //     0
-    //   );
-    // });
+      console.log("[TX] settle", signature);
+
+      await printLogs(
+        randomnessService.provider.connection,
+        signature,
+        false,
+        0
+      );
+    });
   });
 });

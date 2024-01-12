@@ -1,6 +1,15 @@
 use crate::*;
 
 #[derive(Clone, Debug, Default, AnchorSerialize, AnchorDeserialize, InitSpace)]
+pub struct Callback {
+    pub program_id: Pubkey,
+    #[max_len(32)]
+    pub accounts: Vec<AccountMetaBorsh>,
+    #[max_len(1024)]
+    pub ix_data: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Default, AnchorSerialize, AnchorDeserialize, InitSpace)]
 pub struct AccountMetaBorsh {
     pub pubkey: Pubkey,
     pub is_signer: bool,
@@ -31,15 +40,6 @@ impl From<AccountMeta> for AccountMetaBorsh {
             is_writable: value.is_writable,
         }
     }
-}
-
-#[derive(Clone, Debug, Default, AnchorSerialize, AnchorDeserialize, InitSpace)]
-pub struct Callback {
-    pub program_id: Pubkey,
-    #[max_len(32)]
-    pub accounts: Vec<AccountMetaBorsh>,
-    #[max_len(1024)]
-    pub ix_data: Vec<u8>,
 }
 
 impl From<AccountMetaBorsh> for AccountMeta {
