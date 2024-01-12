@@ -6,6 +6,23 @@ pub struct AccountMetaBorsh {
     pub is_signer: bool,
     pub is_writable: bool,
 }
+impl AccountMetaBorsh {
+    pub fn new(pubkey: Pubkey, is_signer: bool) -> Self {
+        Self {
+            pubkey,
+            is_signer,
+            is_writable: true,
+        }
+    }
+
+    pub fn new_readonly(pubkey: Pubkey, is_signer: bool) -> Self {
+        Self {
+            pubkey,
+            is_signer,
+            is_writable: false,
+        }
+    }
+}
 impl From<AccountMeta> for AccountMetaBorsh {
     fn from(value: AccountMeta) -> Self {
         Self {

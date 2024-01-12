@@ -452,8 +452,8 @@ pub struct Initialize<'info> {
     pub mint: Account<'info, Mint>,
 
     #[account(
-        constraint = switchboard_function.load()?.services_disabled.is_disabled()
-        && switchboard_service.function == switchboard_function.key()
+        // constraint = switchboard_function.load()?.services_disabled.is_disabled() &&
+        constraint = switchboard_service.function == switchboard_function.key()
     )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
@@ -491,8 +491,8 @@ pub struct SetSwitchboardService<'info> {
     pub authority: Signer<'info>,
 
     #[account(
-        constraint = switchboard_function.load()?.services_disabled.is_disabled() &&
-            switchboard_service.function == switchboard_function.key()
+        // constraint = switchboard_function.load()?.services_disabled.is_disabled() &&
+        constraint = switchboard_service.function == switchboard_function.key()
     )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
@@ -590,12 +590,12 @@ pub struct Settle<'info> {
     pub wallet: Box<Account<'info, TokenAccount>>,
 
     // SWITCHBOARD VALIDATION
-    #[account(
-        constraint = switchboard_function.load()?.validate_service(
-            &switchboard_service,
-            &enclave_signer.to_account_info(),
-        )?
-    )]
+    // #[account(
+    //     constraint = switchboard_function.load()?.validate_service(
+    //         &switchboard_service,
+    //         &enclave_signer.to_account_info(),
+    //     )?
+    // )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     #[account(
         constraint = switchboard_service.function == switchboard_function.key()

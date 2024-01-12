@@ -1,5 +1,6 @@
 use solana_randomness_service::{
-    program::SolanaRandomnessService, RandomnessRequest, ID as SolanaRandomnessServiceID,
+    program::SolanaRandomnessService, AccountMetaBorsh, RandomnessRequest,
+    ID as SolanaRandomnessServiceID,
 };
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
@@ -35,8 +36,8 @@ pub mod solana_randomness_consumer {
             solana_randomness_service::types::Callback {
                 program_id: ID,
                 accounts: vec![
-                    AccountMeta::new_readonly(ctx.accounts.randomness_state.key(), true).into(),
-                    AccountMeta::new_readonly(ctx.accounts.randomness_request.key(), false).into(),
+                    AccountMetaBorsh::new_readonly(ctx.accounts.randomness_state.key(), true),
+                    AccountMetaBorsh::new_readonly(ctx.accounts.randomness_request.key(), false),
                 ],
                 ix_data: get_ixn_discriminator("consume_randomness").to_vec(), // TODO: hardcode this discriminator
             },
