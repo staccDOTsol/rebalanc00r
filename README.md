@@ -83,13 +83,14 @@ echo "TODO"
 To initiate a request:
 
 ```bash
-SWITCHBOARD_SERVICE_KEY="5oPEnsfN9CD5dBcHHC1QXetB8XnyWHLX8Qus2nBGBrqC" anchor run request
+SWITCHBOARD_SERVICE_KEY="2fpdEbugwThMjRQ728Ne4zwGsrjFcCtmYDnwGtzScfnL" anchor run request
 ```
 
 To update the service program crate:
 
 ```bash
 sb solana function sync-enclave AHV7ygefHZQ5extiZ4GbseGANg3AwBWgSUfnUktTrxjd \
-    --setVersion dev-RC_01_09_24_16_06 \
-    --keypair ~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json
+    --setVersion dev-RC_01_12_24_00_07 \
+    --keypair ~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json \
+    --force
 ```

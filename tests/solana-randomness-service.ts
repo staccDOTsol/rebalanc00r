@@ -34,9 +34,11 @@ describe("Solana Randomness Service", () => {
 
   let switchboard: SwitchboardProgram;
   let switchboardService: anchor.web3.PublicKey;
+  let switchboardFunction: anchor.web3.PublicKey;
 
   before(async () => {
-    [switchboard, switchboardService] = await loadSwitchboard(provider);
+    [switchboard, switchboardFunction, switchboardService] =
+      await loadSwitchboard(provider);
   });
 
   describe("solana-randomness-service", () => {
@@ -50,6 +52,7 @@ describe("Solana Randomness Service", () => {
             owner: programStatePubkey,
           }),
           mint: nativeMint,
+          switchboardFunction: switchboardFunction,
           switchboardService: switchboardService,
         })
         .rpc();

@@ -452,8 +452,8 @@ pub struct Initialize<'info> {
     pub mint: Account<'info, Mint>,
 
     #[account(
-        constraint = switchboard_function.load()?.services_disabled.is_disabled() &&
-            switchboard_service.function == switchboard_function.key()
+        constraint = switchboard_function.load()?.services_disabled.is_disabled()
+        && switchboard_service.function == switchboard_function.key()
     )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,

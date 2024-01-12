@@ -1,10 +1,16 @@
-import { nativeMint } from "../sdk";
+import type { State } from "../sdk";
+import { nativeMint, prettyLog } from "../sdk";
 import type { SolanaRandomnessConsumer } from "../target/types/solana_randomness_consumer";
 import type { SolanaRandomnessService } from "../target/types/solana_randomness_service";
 
 import * as anchor from "@coral-xyz/anchor";
 import { promiseWithTimeout, sleep } from "@switchboard-xyz/common";
-import { loadKeypair } from "@switchboard-xyz/solana.js";
+import {
+  FunctionServiceAccount,
+  loadKeypair,
+  NativeMint,
+  SwitchboardProgram,
+} from "@switchboard-xyz/solana.js";
 import chalk from "chalk";
 import dotenv from "dotenv";
 dotenv.config();
@@ -35,25 +41,29 @@ interface RandomnessFulfilled {
 
   const randomnessConsumer: anchor.Program<SolanaRandomnessConsumer> =
     anchor.workspace.SolanaRandomnessConsumer;
-  console.log(`SolanaRandomnessConsumer: ${randomnessConsumer.programId}`);
+  prettyLog(`SolanaRandomnessConsumer`, randomnessConsumer.programId, ["env"]);
 
   const randomnessService: anchor.Program<SolanaRandomnessService> =
     anchor.workspace.SolanaRandomnessService;
-  console.log(`SolanaRandomnessService: ${randomnessService.programId}`);
+  prettyLog(`SolanaRandomnessService`, randomnessService.programId, ["env"]);
 
   const payer = (provider.wallet as anchor.Wallet).payer;
-  console.log(`[env] PAYER: ${payer.publicKey}`);
+  prettyLog("PAYER", payer.publicKey, ["env"]);
 
   const [programStatePubkey, psBump] =
     anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from("STATE")],
       randomnessService.programId
     );
+  prettyLog(`ProgramState`, programStatePubkey, ["env"]);
+
+  const switchboard = await SwitchboardProgram.fromProvider(provider);
+  prettyLog(`Switchboard`, switchboard.attestationProgramId, ["env"]);
+
+  let state: State | undefined = undefined;
 
   try {
-    const state = await randomnessService.account.state.fetch(
-      programStatePubkey
-    );
+    state = await randomnessService.account.state.fetch(programStatePubkey);
     if (process.env.VERBOSE) {
       console.log(
         `[STATE] ${JSON.stringify(
@@ -81,9 +91,11 @@ interface RandomnessFulfilled {
       );
     }
 
-    const switchboardServicePubkey = new anchor.web3.PublicKey(
+    const [serviceAccount, serviceState] = await FunctionServiceAccount.load(
+      switchboard,
       process.env.SWITCHBOARD_SERVICE_PUBKEY
     );
+
     const tx = await randomnessService.methods
       .initialize(new anchor.BN(10_000))
       .accounts({
@@ -93,10 +105,25 @@ interface RandomnessFulfilled {
           owner: programStatePubkey,
         }),
         mint: nativeMint,
-        switchboardService: switchboardServicePubkey,
+        switchboardService: serviceAccount.publicKey,
+        switchboardFunction: serviceState.function,
       })
       .rpc();
     console.log("[TX] initialize", tx);
+
+    state = {
+      bump: psBump,
+      authority: payer.publicKey,
+      mint: NativeMint.address,
+      switchboardService: serviceAccount.publicKey,
+      wallet: anchor.utils.token.associatedAddress({
+        mint: nativeMint,
+        owner: programStatePubkey,
+      }),
+      costPerByte: new anchor.BN(10_000),
+      lastUpdated: new anchor.BN(0),
+      ebuf: [],
+    };
   }
 
   const request = anchor.web3.Keypair.generate();

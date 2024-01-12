@@ -15,16 +15,30 @@ import chalk from "chalk";
 import dotenv from "dotenv";
 dotenv.config();
 
-// export const DEFAULT_SWITCHBOARD_FUNCTION_PUBKEY = new anchor.web3.PublicKey(
-//   "4ZQ9Nkxw2jSbQXdD8AVPLZvCxMv5Z16ufPVfZPicRSMa"
-// );
+export interface State {
+  bump: number;
+  authority: anchor.web3.PublicKey;
+  mint: anchor.web3.PublicKey;
+  switchboardService: anchor.web3.PublicKey;
+  wallet: anchor.web3.PublicKey;
+  costPerByte: anchor.BN;
+  lastUpdated: anchor.BN;
+  ebuf: Array<number>;
+}
 
-// export const DEFAULT_SWITCHBOARD_SERVICE_PUBKEY = new anchor.web3.PublicKey(
-//   "5oPEnsfN9CD5dBcHHC1QXetB8XnyWHLX8Qus2nBGBrqC"
-// );
-
-// export const DEFAULT_SWITCHBOARD_SERVICE_WORKER_PUBKEY =
-//   new anchor.web3.PublicKey("5q3ixsZdEiJeq5Xg9hSdGixrdLNZxxEGYnYYbaNF3DUn");
+export interface RandomnessRequest {
+  isCompleted: number;
+  numBytes: number;
+  user: anchor.web3.PublicKey;
+  escrow: anchor.web3.PublicKey;
+  requestSlot: anchor.BN;
+  callback: {
+    programId: anchor.web3.PublicKey;
+    accounts: Array<anchor.web3.AccountMeta>;
+    data: Buffer;
+  };
+  errorMessage: string;
+}
 
 export const prettyLog = (label: string, value?: any, tags?: string[]) => {
   const getTagString = (t: string) => {
@@ -70,15 +84,6 @@ export interface RandomnessFulfilledEvent {
   request: anchor.web3.PublicKey;
   isSuccess: boolean;
   randomness: Buffer;
-}
-
-export interface State {
-  bump: number;
-  authority: anchor.web3.PublicKey;
-  mint: anchor.web3.PublicKey;
-  switchboardService: anchor.web3.PublicKey;
-  wallet: anchor.web3.PublicKey;
-  costPerByte: anchor.BN;
 }
 
 /** Returns whether we're connected to a localnet cluster */
@@ -176,6 +181,8 @@ export async function getOrCreateRandomnessServiceState(
         owner: programStatePubkey,
       }),
       costPerByte: new anchor.BN(10_000),
+      lastUpdated: new anchor.BN(0),
+      ebuf: [],
     };
   }
 }
@@ -184,7 +191,7 @@ export async function getOrCreateRandomnessServiceState(
 /// will be configured.
 export async function loadSwitchboard(
   provider: anchor.AnchorProvider
-): Promise<[SwitchboardProgram, anchor.web3.PublicKey]> {
+): Promise<[SwitchboardProgram, anchor.web3.PublicKey, anchor.web3.PublicKey]> {
   const switchboard = await SwitchboardProgram.fromProvider(provider);
   console.log(`Switchboard: ${switchboard.attestationProgramId}`);
 
@@ -206,7 +213,7 @@ export async function loadSwitchboard(
       serviceState.function
     );
 
-    return [switchboard, serviceAccount.publicKey];
+    return [switchboard, functionAccount.publicKey, serviceAccount.publicKey];
   }
 
   // Next, check if the env var SWITCHBOARD_FUNCTION_PUBKEY is set. If so, load it and check if it exists on-chain.
