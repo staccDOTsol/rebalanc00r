@@ -6,7 +6,7 @@ This example uses a Switchboard Service to respond to randomness requests on-cha
 
 - [ ] Add scripts/functionality to bootstrap a Switchboard environment with a verifier.
 - [ ] Add a spam script to use 100 keypairs to measure the servers performance.
-- [ ] [**RandomnessService**]: Add `update_program_config` instruction to change the SwitchboardService or modify the fees.
+- [x] [**RandomnessService**]: Add `update_program_config` instruction to change the SwitchboardService or modify the fees.
 - [x] Add a proc macro to automatically add the Switchboard accounts to the Anchor Accounts ctx. It should also add a trait implementation which allows the user to call `ctx.request_randomness(num_bytes, callback)`. **This was added but breaks IDL generation -\_-**.
 - [ ] Add the ability to support a different mint for `cost_per_byte` so a different token is used for fees.
 - [ ] Add the ability to include priority fees on a request.
@@ -16,7 +16,7 @@ This example uses a Switchboard Service to respond to randomness requests on-cha
 | Program             | Description                                                                                                                                                                                                                                                                                                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Randomness Service  | `RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA` <br />This program is responsible for receiving and settling randomness requests. Any program may invoke the randomness service and request N bytes of randomness. Each request emits an anchor event and creates a request account. Upon settlement, the request account is closed indicating the randomness was received. |
-| Randomness Consumer | `2kTqhuxppaBCod6s7g5P6LfD1Jepm86qMCVg4XX1R88W` <br />This is an example program of a randomness consumer which will invoke the randomness service and log the received randomness bytes.                                                                                                                                                                                  |
+| Randomness Consumer | `9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q` <br />This is an example program of a randomness consumer which will invoke the randomness service and log the received randomness bytes.                                                                                                                                                                                  |
 
 ## Setup
 
@@ -89,8 +89,7 @@ SWITCHBOARD_SERVICE_KEY="5oPEnsfN9CD5dBcHHC1QXetB8XnyWHLX8Qus2nBGBrqC" anchor ru
 To update the service program crate:
 
 ```bash
-sb solana function sync-enclave 4ZQ9Nkxw2jSbQXdD8AVPLZvCxMv5Z16ufPVfZPicRSMa \
+sb solana function sync-enclave AHV7ygefHZQ5extiZ4GbseGANg3AwBWgSUfnUktTrxjd \
     --setVersion dev-RC_01_09_24_16_06 \
-    --attestationProgramId sbattyXrzedoNATfc4L31wC9Mhxsi1BmFhTiN8gDshx \
     --keypair ~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json
 ```
