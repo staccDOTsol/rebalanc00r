@@ -21,4 +21,4 @@ anchor-spl = "0.29.0"
 solana-randomness-service = { path = "../solana-randomness-service", features = [
     "cpi",
 ] }
-switchboard-solana = { version = "0.29.81" }
+switchboard-solana = { version = "0.29.83" }

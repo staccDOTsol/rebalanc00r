@@ -12,8 +12,8 @@ dependencies:
     specifier: ^2.3.16
     version: 2.3.16
   '@switchboard-xyz/solana.js':
-    specifier: 3.2.0
-    version: 3.2.0(fastestsmallesttextencoderdecoder@1.0.22)
+    specifier: 3.2.2
+    version: 3.2.2(fastestsmallesttextencoderdecoder@1.0.22)
 
 devDependencies:
   '@commitlint/cli':
@@ -977,8 +977,8 @@ packages:
       - supports-color
     dev: true
 
-  /@switchboard-xyz/solana.js@3.2.0(fastestsmallesttextencoderdecoder@1.0.22):
-    resolution: {integrity: sha512-vJUrSYen9Z62tGRMzCv9/V143+zvgpOfpQpiknH0Clg4opGFlKcekXU8C4lKGTABttPEhHUf+6KZIqeas7Qbcg==}
+  /@switchboard-xyz/solana.js@3.2.2(fastestsmallesttextencoderdecoder@1.0.22):
+    resolution: {integrity: sha512-Ep51ku0nATB4HC3Ll9ANq2uFhuhALS1w29PmaIkeM4YdlOEaEu9Y3j/w04xUr2GNLkkY1T/jjhqglkPfW+wHgA==}
     engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dependencies:
       '@coral-xyz/anchor': 0.29.0

@@ -166,9 +166,10 @@ pub mod solana_randomness_service {
 
         msg!("initializing the request");
 
-        ctx.accounts.request.user = ctx.accounts.payer.key();
-        ctx.accounts.request.request_slot = Clock::get()?.slot;
         ctx.accounts.request.num_bytes = num_bytes;
+        ctx.accounts.request.user = ctx.accounts.payer.key();
+        ctx.accounts.request.escrow = ctx.accounts.escrow.key();
+        ctx.accounts.request.request_slot = Clock::get()?.slot;
         ctx.accounts.request.callback = callback.clone();
 
         // wrap funds from the payer to the escrow account to reward Switchboard service for fuliflling our request
@@ -418,6 +419,28 @@ pub mod solana_randomness_service {
             },
             &[&[b"STATE", &[ctx.accounts.state.bump]]],
         ))?;
+
+        Ok(())
+    }
+
+    /// Allows the user to close the request after acknowledging the error message.
+    pub fn close_request_override<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, CloseRequestOverride<'info>>,
+    ) -> anchor_lang::prelude::Result<()> {
+        if let Some(escrow) = ctx.accounts.escrow.as_ref() {
+            // TODO: check wsol balance
+
+            // Close the token account
+            anchor_spl::token::close_account(CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                CloseAccount {
+                    account: escrow.to_account_info(),
+                    destination: ctx.accounts.user.to_account_info(),
+                    authority: ctx.accounts.state.to_account_info(),
+                },
+                &[&[b"STATE", &[ctx.accounts.state.bump]]],
+            ))?;
+        }
 
         Ok(())
     }
@@ -710,6 +733,50 @@ pub struct CloseRequest<'info> {
         constraint = wallet.is_native() && wallet.owner == state.key(),
     )]
     pub wallet: Box<Account<'info, TokenAccount>>,
+
+    pub system_program: Program<'info, System>,
+
+    pub token_program: Program<'info, Token>,
+}
+
+/////////////////////////////////////////////////////////////
+/// Close Request
+/////////////////////////////////////////////////////////////
+#[derive(Accounts)]
+pub struct CloseRequestOverride<'info> {
+    /// CHECK:
+    #[account(mut)]
+    pub user: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        close = user,
+        has_one = user,
+        has_one = escrow,
+    )]
+    pub request: Box<Account<'info, RandomnessRequest>>,
+
+    #[account(
+        mut,
+        constraint = escrow.is_native() && escrow.owner == state.key(),
+    )]
+    pub escrow: Option<Box<Account<'info, TokenAccount>>>,
+
+    #[account(
+        seeds = [b"STATE"],
+        bump = state.bump,
+        has_one = authority,
+        has_one = wallet,
+    )]
+    pub state: Box<Account<'info, State>>,
+
+    #[account(
+        mut,
+        constraint = wallet.is_native() && wallet.owner == state.key(),
+    )]
+    pub wallet: Box<Account<'info, TokenAccount>>,
+
+    pub authority: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 

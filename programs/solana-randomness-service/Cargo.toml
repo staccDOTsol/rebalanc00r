@@ -18,10 +18,10 @@ default = []
 all = []
 
 [dependencies]
-anchor-lang = { version = "0.29.0" }
+anchor-lang = { version = "0.29.0", features = ["allow-missing-optionals"] }
 anchor-spl = "0.29.0"
 bytemuck = "1.14.0"
-switchboard-solana = { version = "0.29.81" }
+switchboard-solana = { version = "0.29.83" }
 
 # [target.'cfg(target_os = "solana")'.dependencies]
 # solana-randomness-service-macros = { path = "../../crates/solana-randomness-service-macros" }
