@@ -606,8 +606,8 @@ pub struct Settle<'info> {
     pub escrow: Box<Account<'info, TokenAccount>>,
 
     #[account(
-        seeds = [b"STATE"],
-        bump = state.bump,
+        // seeds = [b"STATE"],
+        // bump = state.bump,
         // has_one = wallet,
         // has_one = switchboard_service,
     )]

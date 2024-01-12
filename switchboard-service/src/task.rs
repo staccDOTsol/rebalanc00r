@@ -98,6 +98,10 @@ impl CompiledTask {
                 continue;
             }
 
+            if account.pubkey == Pubkey::default() {
+                continue;
+            }
+
             ixn.accounts.push(account.into());
         }
 
