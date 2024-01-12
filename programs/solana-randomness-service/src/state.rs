@@ -1,7 +1,5 @@
 use crate::*;
 
-use crate::types::*;
-
 // TODO: Add a base_mint, base_wallet, and base_cost_per_byte to the program state for wrapped SOL costs. Then other fees can be in a custom mint.
 // TODO: Add the ability to unwrap rewards to fund the hot wallet
 
@@ -38,10 +36,37 @@ impl State {
     }
 }
 
+// /// Keypair account used as a fallback for listening to randomness requests.
+// /// These accounts are ephemeral and are intended to be closed upon completion.
+// #[account]
+// #[derive(Debug, Default, InitSpace)]
+// pub struct RandomnessRequest {
+//     /// Flag for determining whether the request has been completed.
+//     pub is_completed: u8,
+//     pub num_bytes: u8,
+//     pub user: Pubkey,
+//     pub escrow: Pubkey,
+//     pub request_slot: u64,
+//     pub callback: Callback,
+//     // #[max_len(512)]
+//     // pub error_message: String,
+// }
+// impl RandomnessRequest {
+//     pub fn space(callback: &Callback) -> usize {
+//         let base: usize = 8  // discriminator
+//             + solana_program::borsh0_10::get_instance_packed_len(Box::<RandomnessRequest>::default().as_ref()).unwrap();
+
+//         base
+//         + (callback.ix_data.len()) // callback ix data len
+//         + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len()) // callback accounts len
+//                                                                               // + (512) // error message
+//     }
+// }
+
 /// Keypair account used as a fallback for listening to randomness requests.
 /// These accounts are ephemeral and are intended to be closed upon completion.
-#[account]
-#[derive(Debug, Default, InitSpace)]
+#[account(zero_copy(unsafe))]
+#[derive(InitSpace)]
 pub struct RandomnessRequest {
     /// Flag for determining whether the request has been completed.
     pub is_completed: u8,
@@ -49,18 +74,8 @@ pub struct RandomnessRequest {
     pub user: Pubkey,
     pub escrow: Pubkey,
     pub request_slot: u64,
-    pub callback: Callback,
-    #[max_len(512)]
-    pub error_message: String,
+    pub callback: CallbackZC,
+    // #[max_len(512)]
+    // pub error_message: String,
 }
-impl RandomnessRequest {
-    pub fn space(callback: &Callback) -> usize {
-        let base: usize = 8  // discriminator
-            + solana_program::borsh0_10::get_instance_packed_len(Box::<RandomnessRequest>::default().as_ref()).unwrap();
-
-        base
-        + (callback.ix_data.len()) // callback ix data len
-        + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len()) // callback accounts len
-        + (512) // error message
-    }
-}
+impl RandomnessRequest {}

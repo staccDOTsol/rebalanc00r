@@ -1,12 +1,8 @@
-pub use switchboard_solana::prelude::*;
-
 pub use anchor_spl::token::{spl_token::instruction::AuthorityType, SetAuthority};
 pub use solana_program::sysvar::instructions::ID as SYSVAR_INSTRUCTIONS_ID;
 pub use std::collections::HashMap;
 pub use switchboard_solana::prelude::NativeMint;
-
-pub mod types;
-pub use types::*;
+pub use switchboard_solana::prelude::*;
 
 mod errors;
 pub use errors::*;
@@ -17,13 +13,14 @@ pub use state::*;
 pub mod utils;
 pub use utils::*;
 
-declare_id!("RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA");
+pub mod types;
+pub use types::{AccountMetaBorsh, AccountMetaZC, Callback, CallbackZC, *};
 
-pub use types::{AccountMetaBorsh, Callback};
+declare_id!("RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA");
 
 // We will listen to this event inside of our service
 #[event]
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct RandomnessRequestedEvent {
     #[index]
     pub callback_pid: Pubkey,
@@ -166,11 +163,25 @@ pub mod solana_randomness_service {
 
         msg!("initializing the request");
 
-        ctx.accounts.request.num_bytes = num_bytes;
-        ctx.accounts.request.user = ctx.accounts.payer.key();
-        ctx.accounts.request.escrow = ctx.accounts.escrow.key();
-        ctx.accounts.request.request_slot = Clock::get()?.slot;
-        ctx.accounts.request.callback = callback.clone();
+        let request = &mut ctx.accounts.request.load_init()?;
+
+        request.num_bytes = num_bytes;
+        request.user = ctx.accounts.payer.key();
+        request.escrow = ctx.accounts.escrow.key();
+        request.request_slot = Clock::get()?.slot;
+        request.callback = callback.clone().into();
+
+        // ctx.accounts.request.error_message = String::with_capacity(512);
+
+        // **ctx.accounts.request = RandomnessRequest {
+        //     is_completed: 0,
+        //     num_bytes,
+        //     user: ctx.accounts.payer.key(),
+        //     escrow: ctx.accounts.escrow.key(),
+        //     request_slot: Clock::get()?.slot,
+        //     callback: callback.clone(),
+        //     error_message: String::new(),
+        // };
 
         // wrap funds from the payer to the escrow account to reward Switchboard service for fuliflling our request
         let cost = ctx.accounts.state.request_cost(num_bytes);
@@ -208,22 +219,18 @@ pub mod solana_randomness_service {
         // Verify this method was not called from a CPI
         // assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
 
+        let request = ctx.accounts.request.load()?;
+
         // Need to make sure the payer is not included in the callback as a writeable account. Otherwise, the payer could be drained of funds.
-        for account in ctx.accounts.request.callback.accounts
-            [..ctx.accounts.request.callback.accounts.len()]
-            .iter()
-        {
-            if account.pubkey == ctx.accounts.payer.key() && account.is_writable {
+        for account in request.callback.accounts[..request.callback.accounts.len()].iter() {
+            if account.pubkey == ctx.accounts.payer.key() && account.is_writable.to_bool() {
                 // TODO: We should still transfer funds and close the request without invoking the callback. Wasting our time.
                 return Err(error!(RandomnessError::InvalidCallback));
             }
         }
 
         // Transfer reward (all funds) to the program_state
-        let cost = ctx
-            .accounts
-            .state
-            .request_cost(ctx.accounts.request.num_bytes);
+        let cost = ctx.accounts.state.request_cost(request.num_bytes);
         msg!("cost: {:?}", cost);
 
         // verify the escrow has enough funds
@@ -244,7 +251,7 @@ pub mod solana_randomness_service {
         }
 
         // Perform callback into the clients program
-        let user_callback = &ctx.accounts.request.callback;
+        let user_callback = &request.callback;
         let mut is_success = false;
 
         if user_callback.program_id == Pubkey::default() {
@@ -262,7 +269,7 @@ pub mod solana_randomness_service {
                 .collect();
 
             for account in user_callback.accounts[..user_callback.accounts.len()].iter() {
-                if account.pubkey == ctx.accounts.payer.key() && account.is_writable {
+                if account.pubkey == ctx.accounts.payer.key() && account.is_writable.to_bool() {
                     // TODO: handle this better
                     continue;
                 }
@@ -279,7 +286,7 @@ pub mod solana_randomness_service {
                 }
 
                 if account.pubkey == ctx.accounts.state.key() {
-                    if !account.is_signer {
+                    if !account.is_signer.to_bool() {
                         return Err(error!(RandomnessError::InvalidCallback));
                     }
 
@@ -376,11 +383,10 @@ pub mod solana_randomness_service {
             return Err(error!(RandomnessError::ErrorMessageOverflow));
         }
 
+        let request = ctx.accounts.request.load()?;
+
         // Transfer reward (all funds) to the program_state
-        let cost = ctx
-            .accounts
-            .state
-            .request_cost(ctx.accounts.request.num_bytes);
+        let cost = ctx.accounts.state.request_cost(request.num_bytes);
         msg!("cost: {:?}", cost);
 
         // verify the escrow has enough funds
@@ -400,7 +406,7 @@ pub mod solana_randomness_service {
             )?;
         }
 
-        ctx.accounts.request.error_message = error_message.clone();
+        // ctx.accounts.request.error_message = error_message.clone();
 
         Ok(())
     }
@@ -532,9 +538,9 @@ pub struct Request<'info> {
     #[account(
         init,
         payer = payer,
-        space = RandomnessRequest::space(&callback)
+        space = RandomnessRequest::INIT_SPACE + 8
     )]
-    pub request: Box<Account<'info, RandomnessRequest>>,
+    pub request: AccountLoader<'info, RandomnessRequest>,
 
     #[account(
         init,
@@ -571,6 +577,7 @@ pub struct Request<'info> {
 /// Settle
 /////////////////////////////////////////////////////////////
 #[derive(Accounts)]
+#[instruction(result: Vec<u8>)]
 pub struct Settle<'info> {
     /// The account that pays for the randomness request
     #[account(
@@ -583,8 +590,10 @@ pub struct Settle<'info> {
         mut,
         close = user,
         has_one = user,
+        has_one = escrow,
+        constraint = request.load()?.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
     )]
-    pub request: Box<Account<'info, RandomnessRequest>>,
+    pub request: AccountLoader<'info, RandomnessRequest>,
 
     /// CHECK:
     #[account(
@@ -593,10 +602,7 @@ pub struct Settle<'info> {
     )]
     pub user: AccountInfo<'info>,
 
-    #[account(
-        mut,
-        constraint = escrow.is_native() && escrow.owner == state.key(),
-    )]
+    #[account(mut)]
     pub escrow: Box<Account<'info, TokenAccount>>,
 
     #[account(
@@ -607,19 +613,16 @@ pub struct Settle<'info> {
     )]
     pub state: Box<Account<'info, State>>,
 
-    #[account(
-        mut,
-        constraint = wallet.is_native() && wallet.owner == state.key(),
-    )]
+    #[account(mut)]
     pub wallet: Box<Account<'info, TokenAccount>>,
 
     // SWITCHBOARD VALIDATION
-    #[account(
-        constraint = switchboard_function.load()?.validate_service(
-            &switchboard_service,
-            &enclave_signer.to_account_info(),
-        )?
-    )]
+    // #[account(
+    //     constraint = switchboard_function.load()?.validate_service(
+    //         &switchboard_service,
+    //         &enclave_signer.to_account_info(),
+    //     )?
+    // )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
     pub enclave_signer: Signer<'info>,
@@ -630,12 +633,11 @@ pub struct Settle<'info> {
 
     /// CHECK: todo
     pub callback_pid: AccountInfo<'info>,
-
-    /// CHECK: todo
-    #[account(
-        address = SYSVAR_INSTRUCTIONS_ID,
-    )]
-    pub instructions_sysvar: AccountInfo<'info>,
+    // /// CHECK: todo
+    // #[account(
+    //     address = SYSVAR_INSTRUCTIONS_ID,
+    // )]
+    // pub instructions_sysvar: AccountInfo<'info>,
 }
 
 /////////////////////////////////////////////////////////////
@@ -645,10 +647,10 @@ pub struct Settle<'info> {
 pub struct UserCallbackFailed<'info> {
     #[account(
         mut,
-        constraint = request.is_completed == 0 @ RandomnessError::RequestAlreadyCompleted,
+        constraint = request.load()?.is_completed == 0 @ RandomnessError::RequestAlreadyCompleted,
         has_one = escrow,
     )]
-    pub request: Box<Account<'info, RandomnessRequest>>,
+    pub request: AccountLoader<'info, RandomnessRequest>,
 
     #[account(
         mut,
@@ -711,9 +713,9 @@ pub struct CloseRequest<'info> {
         close = user,
         has_one = user,
         has_one = escrow,
-        constraint = request.is_completed == 1 @ RandomnessError::RequestStillActive,
+        constraint = request.load()?.is_completed == 1 @ RandomnessError::RequestStillActive,
     )]
-    pub request: Box<Account<'info, RandomnessRequest>>,
+    pub request: AccountLoader<'info, RandomnessRequest>,
 
     #[account(
         mut,
@@ -752,13 +754,12 @@ pub struct CloseRequestOverride<'info> {
         mut,
         close = user,
         has_one = user,
-        has_one = escrow,
     )]
-    pub request: Box<Account<'info, RandomnessRequest>>,
+    pub request: AccountLoader<'info, RandomnessRequest>,
 
     #[account(
         mut,
-        constraint = escrow.is_native() && escrow.owner == state.key(),
+        constraint = escrow.is_native() && escrow.owner == state.key() && escrow.key() == request.load()?.escrow,
     )]
     pub escrow: Option<Box<Account<'info, TokenAccount>>>,
 

@@ -181,6 +181,7 @@ interface RandomnessFulfilled {
       console.log(
         `[TX] consumer requests randomness https://explorer.solana.com/tx/${tx}?cluster=devnet`
       );
+      prettyLog("RequestAccount", request.publicKey, ["info"]);
       break;
     } catch (error) {
       console.log(`[TX] error: ${error.message}`);

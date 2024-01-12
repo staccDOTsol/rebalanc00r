@@ -21,6 +21,7 @@ cluster = "Localnet"
 wallet = "~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
 
 [scripts]
+close-requests = "tsx ./scripts/close-requests.ts"
 initialize = "tsx ./scripts/initialize.ts"
 request = "tsx ./scripts/request.ts"
 test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

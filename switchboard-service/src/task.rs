@@ -37,6 +37,16 @@ impl CompiledTask {
 
         let randomness_state_pubkey =
             Pubkey::find_program_address(&[b"STATE"], &RandomnessServiceID).0;
+        let randomness_escrow =
+            get_associated_token_address(&randomness_state_pubkey, &NativeMint::ID);
+
+        info!("Program State: {}", randomness_state_pubkey);
+        info!("Program Wallet: {}", randomness_escrow);
+
+        let request_escrow = get_associated_token_address(&self.request, &NativeMint::ID);
+        info!("Request: {}", self.request);
+        info!("User: {}", self.user);
+        info!("Escrow: {}", request_escrow);
 
         let mut ixn = Instruction {
             program_id: RandomnessServiceID,
@@ -49,17 +59,11 @@ impl CompiledTask {
                 // User (mut)
                 AccountMeta::new(self.user, false),
                 // Request Escrow (mut)
-                AccountMeta::new(
-                    get_associated_token_address(&self.request, &NativeMint::ID),
-                    false,
-                ),
+                AccountMeta::new(request_escrow, false),
                 // State
                 AccountMeta::new_readonly(randomness_state_pubkey, false),
                 // State Wallet (mut)
-                AccountMeta::new(
-                    get_associated_token_address(&randomness_state_pubkey, &NativeMint::ID),
-                    false,
-                ),
+                AccountMeta::new(randomness_escrow, false),
                 // SWITCHBOARD
                 AccountMeta::new_readonly(switchboard_function, false),
                 AccountMeta::new_readonly(switchboard_service, false),
@@ -70,8 +74,8 @@ impl CompiledTask {
                 AccountMeta::new_readonly(TokenProgramID, false),
                 // Callback PID
                 AccountMeta::new_readonly(self.callback.program_id, false),
-                // Instructions Sysvar
-                AccountMeta::new_readonly(SYSVAR_INSTRUCTIONS_ID, false),
+                // // Instructions Sysvar
+                // AccountMeta::new_readonly(SYSVAR_INSTRUCTIONS_ID, false),
             ],
         };
 
@@ -87,6 +91,10 @@ impl CompiledTask {
             }
 
             if account.pubkey == randomness_state_pubkey {
+                continue;
+            }
+
+            if account.pubkey == enclave_signer {
                 continue;
             }
 

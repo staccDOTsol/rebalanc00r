@@ -33,7 +33,7 @@ pub mod solana_randomness_consumer {
                 },
             ),
             8, // Request 8 bytes of randomness
-            solana_randomness_service::types::Callback {
+            solana_randomness_service::Callback {
                 program_id: ID,
                 accounts: vec![
                     AccountMetaBorsh::new_readonly(ctx.accounts.randomness_state.key(), true),
@@ -122,5 +122,5 @@ pub struct ConsumeRandomness<'info> {
     )]
     pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,
 
-    pub request: Box<Account<'info, RandomnessRequest>>,
+    pub request: AccountLoader<'info, RandomnessRequest>,
 }

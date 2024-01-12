@@ -5514,9 +5514,9 @@ dependencies = [
 
 [[package]]
 name = "switchboard-solana"
-version = "0.29.82"
+version = "0.29.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6df7299e427c025d61bfcfbd8f3f91cf2695df6136c2e74420fde602ec140d0"
+checksum = "be755de13095022fd96d3254c4cfb4bfe5704dbed480d0adc46c04571cd4bce2"
 dependencies = [
  "aes-gcm",
  "anchor-client",
