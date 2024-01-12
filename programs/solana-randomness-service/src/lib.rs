@@ -582,23 +582,23 @@ pub struct Settle<'info> {
     /// The account that pays for the randomness request
     #[account(
         mut,
-        owner = system_program.key(),
+        // owner = system_program.key(),
     )]
     pub payer: Signer<'info>,
 
     #[account(
         mut,
         close = user,
-        has_one = user,
-        has_one = escrow,
-        constraint = request.load()?.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
+        // has_one = user,
+        // has_one = escrow,
+        // constraint = request.load()?.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
     )]
     pub request: AccountLoader<'info, RandomnessRequest>,
 
     /// CHECK:
     #[account(
             mut, // receives SOL
-            owner = system_program.key(),
+            // owner = system_program.key(),
     )]
     pub user: AccountInfo<'info>,
 
@@ -608,8 +608,8 @@ pub struct Settle<'info> {
     #[account(
         seeds = [b"STATE"],
         bump = state.bump,
-        has_one = wallet,
-        has_one = switchboard_service,
+        // has_one = wallet,
+        // has_one = switchboard_service,
     )]
     pub state: Box<Account<'info, State>>,
 
@@ -654,7 +654,6 @@ pub struct UserCallbackFailed<'info> {
 
     #[account(
         mut,
-        // escrow::mint = mint,
         constraint = escrow.is_native() && escrow.owner == state.key(),
     )]
     pub escrow: Box<Account<'info, TokenAccount>>,
