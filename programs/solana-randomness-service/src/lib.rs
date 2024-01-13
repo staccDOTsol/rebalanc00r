@@ -597,7 +597,6 @@ pub struct Request<'info> {
 /// Settle
 /////////////////////////////////////////////////////////////
 #[derive(Accounts)]
-#[instruction(result: Vec<u8>)]
 pub struct Settle<'info> {
     /// The account that pays for the randomness request
     #[account(mut)]
