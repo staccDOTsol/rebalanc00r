@@ -6,19 +6,18 @@ skip-lint = false
 
 [programs.devnet]
 solana_randomness_consumer = "9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q"
-solana_randomness_service = "RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA"
+solana_randomness_service = "GYSVfYiSUpcHez6etiwBYme5XpUaG2zA4tAfn3Bni9Z7"
 
 [programs.localnet]
 solana_randomness_consumer = "9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q"
-solana_randomness_service = "RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA"
+solana_randomness_service = "GYSVfYiSUpcHez6etiwBYme5XpUaG2zA4tAfn3Bni9Z7"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-# wallet = "~/.config/solana/id.json"
-wallet = "~/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
+wallet = "/Users/gally/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
 
 [scripts]
 close-requests = "tsx ./scripts/close-requests.ts"
