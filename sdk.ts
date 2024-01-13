@@ -4,12 +4,17 @@ import type { SolanaRandomnessService } from "./target/types/solana_randomness_s
 import * as anchor from "@coral-xyz/anchor";
 import type { IdlEvent, IdlEventField } from "@coral-xyz/anchor/dist/cjs/idl";
 import { promiseWithTimeout, sleep } from "@switchboard-xyz/common";
+import type { BootstrappedAttestationQueue } from "@switchboard-xyz/solana.js";
 import {
+  AttestationQueueAccount,
+  attestationTypes,
   DEVNET_GENESIS_HASH,
   FunctionAccount,
   FunctionServiceAccount,
   MAINNET_GENESIS_HASH,
+  ServiceWorkerAccount,
   SwitchboardProgram,
+  SwitchboardWallet,
 } from "@switchboard-xyz/solana.js";
 import chalk from "chalk";
 import dotenv from "dotenv";
@@ -191,9 +196,9 @@ export async function getOrCreateRandomnessServiceState(
 /// will be configured.
 export async function loadSwitchboard(
   provider: anchor.AnchorProvider
-): Promise<[SwitchboardProgram, anchor.web3.PublicKey, anchor.web3.PublicKey]> {
+): Promise<[SwitchboardProgram, FunctionAccount, FunctionServiceAccount]> {
   const switchboard = await SwitchboardProgram.fromProvider(provider);
-  console.log(`Switchboard: ${switchboard.attestationProgramId}`);
+  prettyLog(`Switchboard`, switchboard.attestationProgramId, ["env"]);
 
   // First, check if the env var SWITCHBOARD_SERVICE_PUBKEY is set. If so, load it and check if it exists on-chain.
   if (process.env.SWITCHBOARD_SERVICE_PUBKEY) {
@@ -213,17 +218,22 @@ export async function loadSwitchboard(
       serviceState.function
     );
 
-    return [switchboard, functionAccount.publicKey, serviceAccount.publicKey];
+    return [switchboard, functionAccount, serviceAccount];
   }
 
-  // Next, check if the env var SWITCHBOARD_FUNCTION_PUBKEY is set. If so, load it and check if it exists on-chain.
-  if (process.env.SWITCHBOARD_FUNCTION_PUBKEY) {
-    prettyLog(
-      `SWITCHBOARD_FUNCTION_PUBKEY`,
-      process.env.SWITCHBOARD_FUNCTION_PUBKEY,
-      ["env"]
-    );
-  }
+  // // Next, check if the env var SWITCHBOARD_FUNCTION_PUBKEY is set. If so, load it and check if it exists on-chain.
+  // if (process.env.SWITCHBOARD_FUNCTION_PUBKEY) {
+  //   prettyLog(
+  //     `SWITCHBOARD_FUNCTION_PUBKEY`,
+  //     process.env.SWITCHBOARD_FUNCTION_PUBKEY,
+  //     ["env"]
+  //   );
+
+  //   const [functionAccount, functionState] = await FunctionAccount.load(
+  //     switchboard,
+  //     process.env.SWITCHBOARD_FUNCTION_PUBKEY
+  //   );
+  // }
 
   // Next, check if the env var SWITCHBOARD_ATTESTATION_QUEUE_PUBKEY is set. If so, load it and check if it exists on-chain.
 
@@ -232,6 +242,89 @@ export async function loadSwitchboard(
   // If here, create a new bootstrapped attestation queue and service worker.
 
   throw new Error("Not implemented");
+}
+
+export async function createSwitchboardService(
+  provider: anchor.AnchorProvider
+): Promise<
+  [
+    SwitchboardProgram,
+    FunctionAccount,
+    FunctionServiceAccount,
+    BootstrappedAttestationQueue
+  ]
+> {
+  const switchboard = await SwitchboardProgram.fromProvider(provider);
+  prettyLog(`Switchboard`, switchboard.attestationProgramId, ["env"]);
+
+  const payer = switchboard.provider.wallet.publicKey;
+  prettyLog(`Payer`, payer, ["env"]);
+
+  const bootstrappedQueue = await AttestationQueueAccount.bootstrapNewQueue(
+    switchboard
+  );
+  prettyLog(`AttestationQueue`, bootstrappedQueue.attestationQueue.publicKey, [
+    "env",
+  ]);
+
+  const [serviceWorkerAccount] = await ServiceWorkerAccount.create(
+    switchboard,
+    {
+      attestationQueue: bootstrappedQueue.attestationQueue.publicKey,
+      region: new attestationTypes.ServerRegion.UnitedStates(),
+      zone: new attestationTypes.ServerZone.West(),
+      maxEnclaveSize: 10 * 1024 * 1024,
+      availableEnclaveSize: 10 * 1024 * 1024,
+      maxCpu: 1,
+      maxServices: 10,
+      enclaveCost: 0,
+    }
+  );
+  prettyLog(`ServiceWorker`, serviceWorkerAccount.publicKey, ["env"]);
+
+  // Use a common SbWallet for all of our functions/services so we only need to fund one
+  let sbWallet: SwitchboardWallet;
+  try {
+    sbWallet = SwitchboardWallet.fromSeed(
+      switchboard,
+      bootstrappedQueue.attestationQueue.publicKey,
+      payer,
+      "default"
+    );
+    await sbWallet.loadData();
+  } catch (error) {
+    [sbWallet] = await SwitchboardWallet.create(
+      switchboard,
+      bootstrappedQueue.attestationQueue.publicKey,
+      payer,
+      "default",
+      16
+    );
+  }
+  prettyLog(`SwitchboardWallet`, sbWallet.publicKey, ["env"]);
+
+  const [functionAccount] =
+    await bootstrappedQueue.attestationQueue.account.createFunction(
+      {
+        container: "N/A",
+      },
+      sbWallet
+    );
+  prettyLog(`FunctionAccount`, functionAccount.publicKey, ["env"]);
+
+  const [serviceAccount] = await FunctionServiceAccount.create(
+    switchboard,
+    {
+      functionAccount,
+      enclaveSize: 1 * 1024 * 1024,
+    },
+    sbWallet
+  );
+  prettyLog(`ServiceAccount`, serviceAccount.publicKey, ["env"]);
+
+  // TODO: have the service request a new enclaveSigner and have the bootstrapped queue approve it
+
+  return [switchboard, functionAccount, serviceAccount, bootstrappedQueue];
 }
 
 export async function printLogs(

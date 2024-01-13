@@ -450,6 +450,26 @@ pub mod solana_randomness_service {
 
         Ok(())
     }
+
+    /// Allows the user to close the request after acknowledging the error message.
+    pub fn close_state_override<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, CloseStateOverride<'info>>,
+    ) -> anchor_lang::prelude::Result<()> {
+        // TODO: check wsol balance
+
+        // Close the token account
+        anchor_spl::token::close_account(CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            CloseAccount {
+                account: ctx.accounts.wallet.to_account_info(),
+                destination: ctx.accounts.authority.to_account_info(),
+                authority: ctx.accounts.state.to_account_info(),
+            },
+            &[&[b"STATE", &[ctx.accounts.state.bump]]],
+        ))?;
+
+        Ok(())
+    }
 }
 
 /////////////////////////////////////////////////////////////
@@ -580,36 +600,30 @@ pub struct Request<'info> {
 #[instruction(result: Vec<u8>)]
 pub struct Settle<'info> {
     /// The account that pays for the randomness request
-    #[account(
-        mut,
-        // owner = system_program.key(),
-    )]
+    #[account(mut)]
     pub payer: Signer<'info>,
 
     #[account(
         mut,
         close = user,
-        // has_one = user,
-        // has_one = escrow,
-        // constraint = request.load()?.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
+        has_one = user,
+        has_one = escrow,
+        constraint = request.load()?.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
     )]
     pub request: AccountLoader<'info, RandomnessRequest>,
 
     /// CHECK:
-    #[account(
-            mut, // receives SOL
-            // owner = system_program.key(),
-    )]
+    #[account(mut)]
     pub user: AccountInfo<'info>,
 
     #[account(mut)]
     pub escrow: Box<Account<'info, TokenAccount>>,
 
     #[account(
-        // seeds = [b"STATE"],
-        // bump = state.bump,
-        // has_one = wallet,
-        // has_one = switchboard_service,
+        seeds = [b"STATE"],
+        bump = state.bump,
+        has_one = wallet,
+        has_one = switchboard_service,
     )]
     pub state: Box<Account<'info, State>>,
 
@@ -617,12 +631,12 @@ pub struct Settle<'info> {
     pub wallet: Box<Account<'info, TokenAccount>>,
 
     // SWITCHBOARD VALIDATION
-    // #[account(
-    //     constraint = switchboard_function.load()?.validate_service(
-    //         &switchboard_service,
-    //         &enclave_signer.to_account_info(),
-    //     )?
-    // )]
+    #[account(
+        constraint = switchboard_function.load()?.validate_service(
+            &switchboard_service,
+            &enclave_signer.to_account_info(),
+        )?
+    )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
     pub enclave_signer: Signer<'info>,
@@ -633,11 +647,11 @@ pub struct Settle<'info> {
 
     /// CHECK: todo
     pub callback_pid: AccountInfo<'info>,
-    // /// CHECK: todo
-    // #[account(
-    //     address = SYSVAR_INSTRUCTIONS_ID,
-    // )]
-    // pub instructions_sysvar: AccountInfo<'info>,
+    /// CHECK: todo
+    #[account(
+        address = SYSVAR_INSTRUCTIONS_ID,
+    )]
+    pub instructions_sysvar: AccountInfo<'info>,
 }
 
 /////////////////////////////////////////////////////////////
@@ -763,6 +777,30 @@ pub struct CloseRequestOverride<'info> {
     pub escrow: Option<Box<Account<'info, TokenAccount>>>,
 
     #[account(
+        seeds = [b"STATE"],
+        bump = state.bump,
+        has_one = authority,
+        has_one = wallet,
+    )]
+    pub state: Box<Account<'info, State>>,
+
+    #[account(
+        mut,
+        constraint = wallet.is_native() && wallet.owner == state.key(),
+    )]
+    pub wallet: Box<Account<'info, TokenAccount>>,
+
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+
+    pub token_program: Program<'info, Token>,
+}
+#[derive(Accounts)]
+pub struct CloseStateOverride<'info> {
+    #[account(
+        mut,
+        close = authority,
         seeds = [b"STATE"],
         bump = state.bump,
         has_one = authority,

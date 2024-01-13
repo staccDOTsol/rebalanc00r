@@ -1,4 +1,5 @@
 import {
+  createSwitchboardService,
   loadSwitchboard,
   nativeMint,
   printLogs,
@@ -10,6 +11,10 @@ import type { SolanaRandomnessService } from "../target/types/solana_randomness_
 import type { Program } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
 import { BN, sleep } from "@switchboard-xyz/common";
+import type {
+  BootstrappedAttestationQueue,
+  FunctionAccount,
+} from "@switchboard-xyz/solana.js";
 import {
   FunctionServiceAccount,
   type SwitchboardProgram,
@@ -36,8 +41,9 @@ describe("Solana Randomness Service", () => {
   console.log(`randomnessConsumer: ${consumerProgram.programId}`);
 
   let switchboard: SwitchboardProgram;
-  let switchboardService: anchor.web3.PublicKey;
-  let switchboardFunction: anchor.web3.PublicKey;
+  let switchboardService: FunctionServiceAccount;
+  let switchboardFunction: FunctionAccount;
+  // let sbNetwork: BootstrappedAttestationQueue;
 
   before(async () => {
     [switchboard, switchboardFunction, switchboardService] =
@@ -55,8 +61,8 @@ describe("Solana Randomness Service", () => {
             owner: programStatePubkey,
           }),
           mint: nativeMint,
-          switchboardFunction: switchboardFunction,
-          switchboardService: switchboardService,
+          switchboardFunction: switchboardFunction.publicKey,
+          switchboardService: switchboardService.publicKey,
         })
         .rpc();
       console.log("[TX] initialize", tx);
@@ -154,7 +160,10 @@ describe("Solana Randomness Service", () => {
         );
 
       const [sbServiceAccount, sbServiceState] =
-        await FunctionServiceAccount.load(switchboard, switchboardService);
+        await FunctionServiceAccount.load(
+          switchboard,
+          switchboardService.publicKey
+        );
       console.log(
         "enclaveSigner",
         sbServiceState.enclave.enclaveSigner.toBase58()
@@ -179,6 +188,7 @@ describe("Solana Randomness Service", () => {
       const signature = await randomnessService.methods
         .settle(result)
         .accounts({
+          user: requestState.user,
           request: request.publicKey,
           escrow: anchor.utils.token.associatedAddress({
             mint: nativeMint,
@@ -191,11 +201,11 @@ describe("Solana Randomness Service", () => {
           }),
           callbackPid: requestState.callback.programId,
 
-          switchboardFunction: switchboardFunction,
-          switchboardService: switchboardService,
+          switchboardFunction: switchboardFunction.publicKey,
+          switchboardService: switchboardService.publicKey,
           // enclaveSigner: sbServiceState.enclave.enclaveSigner,
 
-          instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+          // instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
         })
         .remainingAccounts(remainingAccounts)
         .rpc(config)

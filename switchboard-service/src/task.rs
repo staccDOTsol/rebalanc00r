@@ -74,8 +74,8 @@ impl CompiledTask {
                 AccountMeta::new_readonly(TokenProgramID, false),
                 // Callback PID
                 AccountMeta::new_readonly(self.callback.program_id, false),
-                // // Instructions Sysvar
-                // AccountMeta::new_readonly(SYSVAR_INSTRUCTIONS_ID, false),
+                // Instructions Sysvar
+                AccountMeta::new_readonly(SYSVAR_INSTRUCTIONS_ID, false),
             ],
         };
 
