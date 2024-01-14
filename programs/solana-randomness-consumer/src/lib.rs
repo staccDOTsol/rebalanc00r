@@ -5,7 +5,7 @@ use solana_randomness_service::{
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
 
-declare_id!("YcCsfPxS7DyCSkm3WHKZow1Py42Z73qfqGeL8VVxbSS");
+declare_id!("39hMZgeiesFXMRFt8svuKVsdCW5geiYueSRx7dxhXN4f");
 
 #[program]
 pub mod solana_randomness_consumer {

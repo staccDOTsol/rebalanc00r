@@ -16,7 +16,7 @@ pub use utils::*;
 pub mod types;
 pub use types::{AccountMetaBorsh, Callback};
 
-declare_id!("RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA");
+declare_id!("RANDMo5gFnqnXJW5Z52KNmd24sAo95KAd5VbiCtq5Rh");
 
 // We will listen to this event inside of our service
 #[event]
