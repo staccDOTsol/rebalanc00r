@@ -151,7 +151,7 @@ interface RandomnessFulfilled {
       _reject
     ) => {
       listener = randomnessService.addEventListener(
-        "RandomnessFulfilledEvent",
+        "SimpleRandomnessV1SettledEvent",
         (event, slot) => {
           resolve([event, slot]);
         }

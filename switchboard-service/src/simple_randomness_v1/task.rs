@@ -48,7 +48,7 @@ impl RandomnessTrait for SimpleRandomnessV1CompiledTask {
         switchboard_service: Pubkey,
         enclave_signer: Pubkey,
     ) -> Result<Instruction, SbError> {
-        let mut ixn_data = get_ixn_discriminator("settle").to_vec(); // TODO: hardcode this
+        let mut ixn_data = get_ixn_discriminator("simple_randomness_v1_settle").to_vec(); // TODO: hardcode this
 
         // First add the length of the vec
         ixn_data.append(&mut self.randomness_bytes.len().to_le_bytes().to_vec());
