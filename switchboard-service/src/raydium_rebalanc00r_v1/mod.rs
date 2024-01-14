@@ -338,8 +338,20 @@ impl RandomnessTrait for RebalancingV1CompiledTask {
                     ).unwrap();
                     
                     let liquidity = liquidity / 10 as u128;
+
                     let tick_lower_index = current_tick_less_spacing;
                     let tick_upper_index = current_tick_plus_spacing;
+                    let tick_array_lower_start_index =
+                        raydium_amm_v3::states::TickArrayState::get_array_start_index(
+                            tick_lower_index,
+                            pool.tick_spacing.into(),
+                        );
+                    let tick_array_upper_start_index =
+                        raydium_amm_v3::states::TickArrayState::get_array_start_index(
+                            tick_upper_index,
+                            pool.tick_spacing.into(),
+                        );
+                        
                     let (amount_0, amount_1) = liquidity_math::get_delta_amounts_signed(
                         pool.tick_current,
                         pool.sqrt_price_x64,
