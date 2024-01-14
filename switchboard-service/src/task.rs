@@ -30,7 +30,8 @@ impl CompiledTask {
         let mut ixn_data = get_ixn_discriminator("settle").to_vec(); // TODO: hardcode this
 
         // First add the length of the vec
-        ixn_data.append(&mut self.num_bytes.to_le_bytes().to_vec());
+        let num_bytes: u32 = self.num_bytes.into();
+        ixn_data.append(&mut num_bytes.to_le_bytes().to_vec());
 
         // Then add the vec elements
         ixn_data.append(&mut self.randomness_bytes.clone());
@@ -155,7 +156,7 @@ impl CompiledTask {
                     commitment: CommitmentLevel::Processed,
                 },
                 RpcSendTransactionConfig {
-                    preflight_commitment: Some(CommitmentLevel::Processed),
+                    // preflight_commitment: Some(CommitmentLevel::Processed),
                     min_context_slot: Some(recent_blockhash.1),
                     skip_preflight: true,
                     ..Default::default()
