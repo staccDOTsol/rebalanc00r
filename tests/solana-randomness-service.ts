@@ -203,9 +203,9 @@ describe("Solana Randomness Service", () => {
 
           switchboardFunction: switchboardFunction.publicKey,
           switchboardService: switchboardService.publicKey,
-          // enclaveSigner: sbServiceState.enclave.enclaveSigner,
+          enclaveSigner: sbServiceState.enclave.enclaveSigner,
 
-          // instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+          instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
         })
         .remainingAccounts(remainingAccounts)
         .rpc(config)

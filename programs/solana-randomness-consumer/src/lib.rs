@@ -5,7 +5,7 @@ use solana_randomness_service::{
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
 
-declare_id!("9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q");
+declare_id!("YcCsfPxS7DyCSkm3WHKZow1Py42Z73qfqGeL8VVxbSS");
 
 #[program]
 pub mod solana_randomness_consumer {
@@ -36,8 +36,8 @@ pub mod solana_randomness_consumer {
             solana_randomness_service::Callback {
                 program_id: ID,
                 accounts: vec![
-                    AccountMetaBorsh::new_readonly(ctx.accounts.randomness_state.key(), true),
-                    AccountMetaBorsh::new_readonly(ctx.accounts.randomness_request.key(), false),
+                    AccountMeta::new_readonly(ctx.accounts.randomness_state.key(), true).into(),
+                    AccountMeta::new_readonly(ctx.accounts.randomness_request.key(), false).into(),
                 ],
                 ix_data: get_ixn_discriminator("consume_randomness").to_vec(), // TODO: hardcode this discriminator
             },
@@ -122,5 +122,5 @@ pub struct ConsumeRandomness<'info> {
     )]
     pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,
 
-    pub request: AccountLoader<'info, RandomnessRequest>,
+    pub request: Box<Account<'info, RandomnessRequest>>,
 }

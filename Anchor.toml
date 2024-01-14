@@ -5,12 +5,12 @@ seeds = true
 skip-lint = false
 
 [programs.devnet]
-solana_randomness_consumer = "9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q"
-solana_randomness_service = "GYSVfYiSUpcHez6etiwBYme5XpUaG2zA4tAfn3Bni9Z7"
+solana_randomness_consumer = "YcCsfPxS7DyCSkm3WHKZow1Py42Z73qfqGeL8VVxbSS"
+solana_randomness_service = "44Drav82v2CBqPoVWR7hEwxZzt4642HR58cjvJKaQP8g"
 
 [programs.localnet]
-solana_randomness_consumer = "9VkpWFTzgVqw8QPfAFBHWQMh2ZmaGbwZU4uZ8HzM4d9Q"
-solana_randomness_service = "GYSVfYiSUpcHez6etiwBYme5XpUaG2zA4tAfn3Bni9Z7"
+solana_randomness_consumer = "YcCsfPxS7DyCSkm3WHKZow1Py42Z73qfqGeL8VVxbSS"
+solana_randomness_service = "44Drav82v2CBqPoVWR7hEwxZzt4642HR58cjvJKaQP8g"
 
 [registry]
 url = "https://api.apr.dev"
