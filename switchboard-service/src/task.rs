@@ -15,7 +15,6 @@ const REQUEST_ACCOUNT_DOESNT_EXIST_ERROR_STR: &str = "Program log: AnchorError c
 pub struct CompiledTask {
     pub request: Pubkey,
     pub user: Pubkey,
-    pub num_bytes: u8,
     pub callback: Callback,
     pub randomness_bytes: Vec<u8>,
 }
@@ -30,27 +29,16 @@ impl CompiledTask {
         let mut ixn_data = get_ixn_discriminator("settle").to_vec(); // TODO: hardcode this
 
         // First add the length of the vec
-        let num_bytes: u32 = self.num_bytes.into();
-        ixn_data.append(&mut num_bytes.to_le_bytes().to_vec());
+        ixn_data.append(&mut self.randomness_bytes.len().to_le_bytes().to_vec());
 
         // Then add the vec elements
         ixn_data.append(&mut self.randomness_bytes.clone());
 
-        info!("Ixn Data Len: {}", ixn_data.len());
-        info!("Ixn Data: {:#?}", ixn_data);
-
+        // TODO: dont compute these everytime, pass through ctx
         let randomness_state_pubkey =
             Pubkey::find_program_address(&[b"STATE"], &RandomnessServiceID).0;
         let randomness_escrow =
             get_associated_token_address(&randomness_state_pubkey, &NativeMint::ID);
-
-        info!("Program State: {}", randomness_state_pubkey);
-        info!("Program Wallet: {}", randomness_escrow);
-
-        let request_escrow = get_associated_token_address(&self.request, &NativeMint::ID);
-        info!("Request: {}", self.request);
-        info!("User: {}", self.user);
-        info!("Escrow: {}", request_escrow);
 
         let mut ixn = Instruction::new_with_bytes(
             RandomnessServiceID,
@@ -61,7 +49,10 @@ impl CompiledTask {
                 // Request (mut)
                 AccountMeta::new(self.request, false),
                 // Request Escrow (mut)
-                AccountMeta::new(request_escrow, false),
+                AccountMeta::new(
+                    get_associated_token_address(&self.request, &NativeMint::ID),
+                    false,
+                ),
                 // State
                 AccountMeta::new_readonly(randomness_state_pubkey, false),
                 // State Wallet (mut)
@@ -376,7 +367,6 @@ impl RandomnessTask {
         Ok(CompiledTask {
             request: self.request,
             user: self.user,
-            num_bytes: self.num_bytes,
             callback: self.callback.clone(),
             randomness_bytes,
         })

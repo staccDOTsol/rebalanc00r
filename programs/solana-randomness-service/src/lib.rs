@@ -169,18 +169,6 @@ pub mod solana_randomness_service {
         ctx.accounts.request.request_slot = Clock::get()?.slot;
         ctx.accounts.request.callback = callback.clone().into();
 
-        // ctx.accounts.request.error_message = String::with_capacity(512);
-
-        // **ctx.accounts.request = RandomnessRequest {
-        //     is_completed: 0,
-        //     num_bytes,
-        //     user: ctx.accounts.payer.key(),
-        //     escrow: ctx.accounts.escrow.key(),
-        //     request_slot: Clock::get()?.slot,
-        //     callback: callback.clone(),
-        //     error_message: String::new(),
-        // };
-
         // wrap funds from the payer to the escrow account to reward Switchboard service for fuliflling our request
         let cost = ctx.accounts.state.request_cost(num_bytes);
         if cost > 0 {
@@ -211,11 +199,10 @@ pub mod solana_randomness_service {
         ctx: Context<'a, 'b, 'c, 'info, Settle<'info>>,
         result: Vec<u8>,
     ) -> anchor_lang::prelude::Result<()> {
-        msg!("Skipping CPI check ...");
-        // msg!("Checking this ixn is not a CPI call ...");
+        msg!("Checking this ixn is not a CPI call ...");
 
         // Verify this method was not called from a CPI
-        // assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
+        assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
 
         // Need to make sure the payer is not included in the callback as a writeable account. Otherwise, the payer could be drained of funds.
         for account in ctx.accounts.request.callback.accounts
@@ -610,7 +597,7 @@ pub struct Settle<'info> {
         close = user,
         has_one = user,
         has_one = escrow,
-        // constraint = request.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
+        constraint = request.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
     )]
     pub request: Box<Account<'info, RandomnessRequest>>,
 
@@ -635,16 +622,15 @@ pub struct Settle<'info> {
     pub wallet: Box<Account<'info, TokenAccount>>,
 
     // SWITCHBOARD VALIDATION
-    // #[account(
-    //     constraint = switchboard_function.load()?.validate_service(
-    //         &switchboard_service,
-    //         &enclave_signer.to_account_info(),
-    //     )?
-    // )]
+    #[account(
+        constraint = switchboard_function.load()?.validate_service(
+            &switchboard_service,
+            &enclave_signer.to_account_info(),
+        )?
+    )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
-    /// CHECK:
-    pub enclave_signer: UncheckedAccount<'info>,
+    pub enclave_signer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
