@@ -1,5 +1,6 @@
 use crate::*;
 
+use solana_randomness_service::{SimpleRandomnessV1Account, SimpleRandomnessV1RequestedEvent};
 use tokio::time::sleep;
 use tokio::{join, try_join};
 
@@ -46,7 +47,7 @@ pub struct SolanaService {
     ////////////////////////////////////////
     pub recent_blockhash: Arc<RwLock<(Hash, u64)>>,
     pub service_account: Arc<RwLock<FunctionServiceAccountData>>,
-    pub request_accounts: Arc<DashMap<Pubkey, RandomnessRequest>>,
+    pub request_accounts: Arc<DashMap<Pubkey, SimpleRandomnessV1Account>>,
     pub func_signer_rotation_interval: Arc<RwLock<i64>>,
 
     ////////////////////////////////////////
@@ -57,13 +58,13 @@ pub struct SolanaService {
     ////////////////////////////////////////
     // Worker
     ////////////////////////////////////////
-    pub task_queue: Arc<Injector<RandomnessTask>>,
+    pub task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
 }
 
 impl SolanaService {
     /// Initialize a new Solana oracle with a cache.
     pub async fn new(
-        task_queue: Arc<Injector<RandomnessTask>>,
+        task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
         secure_signer: Arc<SecureSigner>,
     ) -> Result<Self, SbError> {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
@@ -141,7 +142,7 @@ impl SolanaService {
     /// Start the Solana oracle and watch the chain for functions to execute.
     pub async fn start(
         &mut self,
-        task_queue_rx: UnboundedReceiver<CompiledTask>,
+        task_queue_rx: UnboundedReceiver<SimpleRandomnessV1CompiledTask>,
         rotate_signer_tx: Arc<Sender<u8>>,
     ) {
         println!("Starting routines ...");
@@ -211,7 +212,7 @@ impl SolanaService {
     }
 
     async fn process_ix_batch(
-        tasks: Vec<CompiledTask>,
+        tasks: Vec<SimpleRandomnessV1CompiledTask>,
         secure_signer: Arc<SecureSigner>,
         recent_blockhash: Arc<RwLock<(Hash, u64)>>,
     ) {
@@ -231,7 +232,7 @@ impl SolanaService {
         // Read the recent blockhash
         let recent_blockhash = Arc::new(*recent_blockhash.read().await);
 
-        let batch = CompiledTaskBatch {
+        let batch = SimpleRandomnessV1CompiledTaskBatch {
             // ctx: ctx.clone(),
             tasks: tasks.clone(),
             enclave_signer: enclave_signer.clone(),
@@ -242,7 +243,7 @@ impl SolanaService {
     }
 
     // Basically just handles batching ixns into groups of 10 so we dont need to keep calling read on RwLocks
-    async fn start_workers(&self, mut tx_queue: UnboundedReceiver<CompiledTask>) {
+    async fn start_workers(&self, mut tx_queue: UnboundedReceiver<SimpleRandomnessV1CompiledTask>) {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
 
         let rpc = ctx.rpc.clone();
@@ -250,7 +251,7 @@ impl SolanaService {
         let payer = ctx.payer.clone();
         let recent_blockhash = self.recent_blockhash.clone();
 
-        let mut tasks: Vec<CompiledTask> = Vec::with_capacity(10);
+        let mut tasks: Vec<SimpleRandomnessV1CompiledTask> = Vec::with_capacity(10);
         let batch_size = 10; // Define your batch size
         let timeout_duration = Duration::from_millis(100); // Adjust as needed
 
@@ -508,9 +509,11 @@ impl SolanaService {
 
                             match discriminator {
                                 // request
-                                RandomnessRequestedEvent::DISCRIMINATOR => {
+                                SimpleRandomnessV1RequestedEvent::DISCRIMINATOR => {
                                     if let Ok(event) =
-                                        RandomnessRequestedEvent::try_from_slice(&decoded[8..])
+                                        SimpleRandomnessV1RequestedEvent::try_from_slice(
+                                            &decoded[8..],
+                                        )
                                     {
                                         self.handle_randomness_requested_event(event).await;
                                     }
@@ -545,7 +548,7 @@ impl SolanaService {
         }
     }
 
-    async fn handle_randomness_requested_event(&self, event: RandomnessRequestedEvent) {
+    async fn handle_randomness_requested_event(&self, event: SimpleRandomnessV1RequestedEvent) {
         debug!("[EVENT][REQUEST] {:#?}", event);
 
         // // Check if in_flight_requests contains the request id
@@ -555,7 +558,7 @@ impl SolanaService {
         // }
 
         // Add to Injector queue
-        self.task_queue.push(RandomnessTask {
+        self.task_queue.push(SimpleRandomnessV1TaskInput {
             request: event.request,
             user: event.user,
             num_bytes: event.num_bytes,
@@ -590,7 +593,7 @@ impl SolanaService {
                 RpcProgramAccountsConfig {
                     filters: Some(vec![RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
                         0,
-                        RandomnessRequest::DISCRIMINATOR.to_vec(),
+                        SimpleRandomnessV1RequestedEvent::DISCRIMINATOR.to_vec(),
                     ))]),
                     account_config: RpcAccountInfoConfig {
                         encoding: Some(UiAccountEncoding::Base64), // TODO: Base64Zstd
@@ -614,7 +617,7 @@ impl SolanaService {
             // }
 
             let request_state =
-                match RandomnessRequest::try_deserialize(&mut &request_account.data[..]) {
+                match SimpleRandomnessV1Account::try_deserialize(&mut &request_account.data[..]) {
                     Ok(state) => state,
                     Err(e) => {
                         error!("Failed to deserialize request account: {:?}", e);
@@ -622,7 +625,7 @@ impl SolanaService {
                     }
                 };
 
-            let task = RandomnessTask {
+            let task = SimpleRandomnessV1TaskInput {
                 request: request_pubkey,
                 user: request_state.user,
                 num_bytes: request_state.num_bytes,

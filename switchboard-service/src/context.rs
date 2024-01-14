@@ -18,6 +18,8 @@ pub struct ServiceContext {
     pub service_worker: Pubkey,
     pub attestation_queue: Pubkey,
     pub function: Pubkey,
+    pub randomness_service_state: Pubkey,
+    pub randomness_service_wallet: Pubkey,
 }
 
 impl ServiceContext {
@@ -88,6 +90,11 @@ impl ServiceContext {
         // Make sure the function exists
         let function_data = FunctionAccountData::fetch_async(&rpc, service_data.function).await?;
 
+        let randomness_service_state =
+            Pubkey::find_program_address(&[b"STATE"], &RandomnessServiceID).0;
+        let randomness_service_wallet =
+            get_associated_token_address(&randomness_service_state, &NativeMint::ID);
+
         Ok(Self {
             rpc,
             payer,
@@ -95,6 +102,8 @@ impl ServiceContext {
             service_worker: service_data.service_worker,
             attestation_queue,
             function: service_data.function,
+            randomness_service_state,
+            randomness_service_wallet,
         })
     }
 

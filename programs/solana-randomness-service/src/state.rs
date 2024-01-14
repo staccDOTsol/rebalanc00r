@@ -1,6 +1,4 @@
-use anchor_lang::prelude::*;
-
-use crate::types::{AccountMetaBorsh, Callback};
+use crate::*;
 
 // TODO: Add a base_mint, base_wallet, and base_cost_per_byte to the program state for wrapped SOL costs. Then other fees can be in a custom mint.
 // TODO: Add the ability to unwrap rewards to fund the hot wallet
@@ -35,41 +33,5 @@ impl State {
     pub fn request_cost(&self, num_bytes: u8) -> u64 {
         // @DEV - here we can add some lamports if we want to hardcode a priority fee.
         5000u64 + (self.cost_per_byte * u64::from(num_bytes))
-    }
-}
-
-/// Keypair account used as a fallback for listening to randomness requests.
-/// These accounts are ephemeral and are intended to be closed upon completion.
-#[account]
-#[derive(Debug, Default, InitSpace)]
-pub struct RandomnessRequest {
-    /// Flag for determining whether the request has been completed.
-    pub is_completed: u8,
-    pub num_bytes: u8,
-    pub user: Pubkey,
-    pub escrow: Pubkey,
-    pub request_slot: u64,
-    pub callback: Callback,
-    // #[max_len(512)]
-    // pub error_message: String,
-}
-impl RandomnessRequest {
-    pub fn space(callback: &Callback) -> usize {
-        let base: usize = 8  // discriminator
-            + std::mem::size_of::<RandomnessRequest>();
-
-        msg!(
-            "base: {}, ix_data_len: {}, accounts_len: {} * {}",
-            base,
-            callback.ix_data.len(),
-            callback.accounts.len(),
-            std::mem::size_of::<AccountMetaBorsh>()
-        );
-
-        base
-        + (callback.ix_data.len()) // callback ix data len
-        + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len())
-        // callback accounts len
-        // + (512) // error message
     }
 }

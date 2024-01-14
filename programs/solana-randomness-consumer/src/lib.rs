@@ -1,6 +1,6 @@
+use solana_randomness_service::SimpleRandomnessV1Account;
 use solana_randomness_service::{
-    program::SolanaRandomnessService, AccountMetaBorsh, RandomnessRequest,
-    ID as SolanaRandomnessServiceID,
+    program::SolanaRandomnessService, ID as SolanaRandomnessServiceID,
 };
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
@@ -15,10 +15,10 @@ pub mod solana_randomness_consumer {
         msg!("Requesting randomness...");
 
         // Call the randomness service and request a new value
-        solana_randomness_service::cpi::request(
+        solana_randomness_service::cpi::simple_randomness_v1(
             CpiContext::new(
                 ctx.accounts.randomness_service.to_account_info(),
-                solana_randomness_service::cpi::accounts::Request {
+                solana_randomness_service::cpi::accounts::SimpleRandomnessV1Request {
                     request: ctx.accounts.randomness_request.to_account_info(),
                     escrow: ctx.accounts.randomness_escrow.to_account_info(),
                     state: ctx.accounts.randomness_state.to_account_info(),
@@ -122,5 +122,5 @@ pub struct ConsumeRandomness<'info> {
     )]
     pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,
 
-    pub request: Box<Account<'info, RandomnessRequest>>,
+    pub request: Box<Account<'info, SimpleRandomnessV1Account>>,
 }

@@ -7,6 +7,9 @@ pub use log::{debug, error, info, trace};
 pub mod env;
 pub use env::*;
 
+pub mod tx;
+pub use tx::*;
+
 mod service;
 pub use service::*;
 
@@ -16,16 +19,13 @@ pub use context::*;
 mod signer;
 pub use signer::*;
 
-pub mod events;
-pub use events::*;
+pub mod simple_randomness_v1;
+pub use simple_randomness_v1::*;
 
-pub mod task;
-pub use task::*;
+pub mod tasks;
+pub use tasks::*;
 
-pub use solana_randomness_service::{
-    Callback, CallbackZC, RandomnessRequest, RandomnessRequestedEvent,
-    Settle as RandomnessServiceSettle, ID as RandomnessServiceID,
-};
+pub use solana_randomness_service::{Callback, ID as RandomnessServiceID};
 
 // Switchboard deps
 pub use switchboard_common::{blocking_retry, retry};
@@ -147,12 +147,13 @@ async fn main() -> Result<()> {
                 let secure_signer = Arc::new(SecureSigner::new(ctx_arc.clone())?);
 
                 // Build a task queue to process requests sequentially and across worker pool
-                let task_queue: Arc<Injector<RandomnessTask>> = Arc::new(Injector::new());
+                let task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>> =
+                    Arc::new(Injector::new());
 
                 // Create an unbounded mpsc channel to signal when an instruction is ready to be sent on-chain and await confirmation. These should be batched
                 // to prevent thread exhaustion
                 let (task_queue_tx, mut task_queue_rx) =
-                    tokio::sync::mpsc::unbounded_channel::<CompiledTask>();
+                    tokio::sync::mpsc::unbounded_channel::<SimpleRandomnessV1CompiledTask>();
 
                 // Create a channel to signal when the signer should be rotated
                 let (rotate_signer_tx, mut rotate_signer_rx) = tokio::sync::mpsc::channel::<u8>(1);
@@ -220,8 +221,8 @@ async fn main() -> Result<()> {
 
 async fn worker_thread(
     subsys: SubsystemHandle,
-    task_queue: Arc<Injector<RandomnessTask>>,
-    task_queue_tx: UnboundedSender<CompiledTask>,
+    task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
+    task_queue_tx: UnboundedSender<SimpleRandomnessV1CompiledTask>,
 ) -> Result<(), SbError> {
     // we need a way to receive the shutdown request and start draining the queue
     let mut shutdown_requested = false;
@@ -236,7 +237,7 @@ async fn worker_thread(
                 match task_queue.steal() {
                     Steal::Success(task) => {
                         // Process the task...
-                        let compiled_task: CompiledTask =
+                        let compiled_task: SimpleRandomnessV1CompiledTask =
                             match blocking_retry!(3, 10, task.compile()) {
                                 Ok(compiled_task) => compiled_task,
                                 Err(e) => {
@@ -307,8 +308,8 @@ async fn worker_thread(
 async fn service_thread(
     subsys: SubsystemHandle,
     secure_signer: Arc<SecureSigner>,
-    task_queue: Arc<Injector<RandomnessTask>>,
-    mut task_queue_rx: UnboundedReceiver<CompiledTask>,
+    task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
+    mut task_queue_rx: UnboundedReceiver<SimpleRandomnessV1CompiledTask>,
     rotate_signer_tx: Sender<u8>,
 ) -> Result<(), SbError> {
     let mut service = SolanaService::new(task_queue.clone(), secure_signer.clone())
