@@ -157,6 +157,7 @@ impl CompiledTask {
                 RpcSendTransactionConfig {
                     preflight_commitment: Some(CommitmentLevel::Processed),
                     min_context_slot: Some(recent_blockhash.1),
+                    skip_preflight: true,
                     ..Default::default()
                 },
             )
