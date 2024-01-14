@@ -99,7 +99,6 @@ impl<'info> SimpleRandomnessV1Settle<'info> {
             .accounts
             .state
             .request_cost(ctx.accounts.request.num_bytes);
-        msg!("cost: {:?}", cost);
 
         // verify the escrow has enough funds
         if cost > ctx.accounts.escrow.amount {
@@ -107,7 +106,6 @@ impl<'info> SimpleRandomnessV1Settle<'info> {
         }
 
         if ctx.accounts.escrow.amount > 0 {
-            msg!("transferrring {:?} to wallet", ctx.accounts.escrow.amount);
             transfer(
                 &ctx.accounts.token_program.to_account_info(),
                 &ctx.accounts.escrow,
