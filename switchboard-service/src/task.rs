@@ -118,10 +118,6 @@ impl CompiledTask {
             enclave_signer.pubkey(),
         )?;
 
-        for (i, account) in ix.accounts.iter().enumerate() {
-            info!("Ixn Account #{}: {}", i, account.pubkey);
-        }
-
         let mut tx = Transaction::new_with_payer(&[ix.clone()], Some(&payer.pubkey()));
         let signers = vec![payer.as_ref(), enclave_signer.deref()];
 
