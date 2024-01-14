@@ -39,7 +39,7 @@ pub mod solana_randomness_consumer {
                     AccountMeta::new_readonly(ctx.accounts.randomness_state.key(), true).into(),
                     AccountMeta::new_readonly(ctx.accounts.randomness_request.key(), false).into(),
                 ],
-                ix_data: get_ixn_discriminator("consume_randomness").to_vec(), // TODO: hardcode this discriminator
+                ix_data: get_ixn_discriminator("consume_randomness").to_vec(), // TODO: hardcode this discriminator [190,217,49,162,99,26,73,234]
             },
         )?;
 
