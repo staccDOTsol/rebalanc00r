@@ -6,11 +6,11 @@ skip-lint = false
 
 [programs.devnet]
 solana_randomness_consumer = "YcCsfPxS7DyCSkm3WHKZow1Py42Z73qfqGeL8VVxbSS"
-solana_randomness_service = "44Drav82v2CBqPoVWR7hEwxZzt4642HR58cjvJKaQP8g"
+solana_randomness_service = "RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA"
 
 [programs.localnet]
 solana_randomness_consumer = "YcCsfPxS7DyCSkm3WHKZow1Py42Z73qfqGeL8VVxbSS"
-solana_randomness_service = "44Drav82v2CBqPoVWR7hEwxZzt4642HR58cjvJKaQP8g"
+solana_randomness_service = "RANDMa8hJmXEnKyQtbgrWsg4AgomUG1PFDr1yPP1hFA"
 
 [registry]
 url = "https://api.apr.dev"
