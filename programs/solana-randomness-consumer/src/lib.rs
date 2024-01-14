@@ -1,11 +1,12 @@
 use solana_randomness_service::SimpleRandomnessV1Account;
 use solana_randomness_service::{
-    program::SolanaRandomnessService, ID as SolanaRandomnessServiceID,
+    program::SolanaRandomnessService,
 };
+use std::str::FromStr;
 use switchboard_solana::prelude::*;
 use switchboard_solana::utils::get_ixn_discriminator;
 
-declare_id!("39hMZgeiesFXMRFt8svuKVsdCW5geiYueSRx7dxhXN4f");
+declare_id!("2z6PF25eaMi2He3v3AqPXvUe467XUpZ2UJbPN6tyHoh5");
 
 #[program]
 pub mod solana_randomness_consumer {
@@ -34,7 +35,7 @@ pub mod solana_randomness_consumer {
             ),
             8, // Request 8 bytes of randomness
             solana_randomness_service::Callback {
-                program_id: ID,
+                program_id: "55hPkRP72t4finkHx8KUoHMUDRmS9U9ELig3oRNFt7wY".parse().unwrap(),
                 accounts: vec![
                     AccountMeta::new_readonly(ctx.accounts.randomness_state.key(), true).into(),
                     AccountMeta::new_readonly(ctx.accounts.randomness_request.key(), false).into(),
@@ -117,7 +118,7 @@ pub struct ConsumeRandomness<'info> {
     #[account(
         signer,
         seeds = [b"STATE"],
-        seeds::program = SolanaRandomnessServiceID,
+        seeds::program = Pubkey::from_str("55hPkRP72t4finkHx8KUoHMUDRmS9U9ELig3oRNFt7wY").unwrap(),
         bump = randomness_state.bump,
     )]
     pub randomness_state: Box<Account<'info, solana_randomness_service::State>>,

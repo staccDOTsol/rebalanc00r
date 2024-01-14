@@ -14,13 +14,67 @@ import {
   SwitchboardProgram,
 } from "@switchboard-xyz/solana.js";
 import chalk from "chalk";
+
+
+import { BN, parseRawMrEnclave } from "@switchboard-xyz/common";
+import type { attestationTypes } from "@switchboard-xyz/solana.js";
+import { SwitchboardWallet, VerifierAccount } from "@switchboard-xyz/solana.js";
+import {
+  AttestationQueueAccount,
+} from "@switchboard-xyz/solana.js";
 import dotenv from "dotenv";
 dotenv.config();
+
+
+export function getSwitchboardWalletPubkeys(
+  program: anchor.Program,
+  attestationQueue: anchor.web3.PublicKey,
+  authority: anchor.web3.PublicKey,
+  name?: string | anchor.web3.PublicKey
+): [anchor.web3.PublicKey, anchor.web3.PublicKey] {
+  const rawNameBytes: Uint8Array =
+    name instanceof anchor.web3.PublicKey
+      ? name.toBytes()
+      : new Uint8Array(Buffer.from(name ?? "DefaultWallet"));
+
+  const nameBytes = new Uint8Array(32);
+  nameBytes.set(rawNameBytes);
+
+  const escrowWalletPubkey = anchor.web3.PublicKey.findProgramAddressSync(
+    [
+      nativeMint.toBytes(),
+      attestationQueue.toBytes(),
+      authority.toBytes(),
+      nameBytes.slice(0, 32),
+    ],
+    program.programId
+  )[0];
+
+  const escrowTokenWalletPubkey = anchor.utils.token.associatedAddress({
+    owner: escrowWalletPubkey,
+    mint: nativeMint,
+  });
+
+  return [escrowWalletPubkey, escrowTokenWalletPubkey];
+}
+export function logEnvVariables(
+  env: Array<[string, string | anchor.web3.PublicKey]>,
+  pre = "Make sure to add the following to your .env file:"
+) {
+  console.log(
+    `\n${pre}\n\t${env
+      .map(
+        ([key, value]) =>
+          `${chalk.blue(key.toUpperCase())}=${chalk.yellow(value)}`
+      )
+      .join("\n\t")}\n`
+  );
+}
 
 (async () => {
   console.log(
     `\n${chalk.green(
-      "This script will initialize the Switchboard Randomness service and allow us to request randomness."
+      "This script will initialize the Switchboard Reblancing service and allow us to request randomness."
     )}`
   );
 
@@ -28,10 +82,10 @@ dotenv.config();
   anchor.setProvider(
     process.argv.length > 2
       ? new anchor.AnchorProvider(
-          provider.connection,
-          new anchor.Wallet(loadKeypair(process.argv[2])),
-          {}
-        )
+        provider.connection,
+        new anchor.Wallet(loadKeypair(process.argv[2])),
+        {}
+      )
       : provider
   );
   const payer = (provider.wallet as anchor.Wallet).payer;
@@ -41,116 +95,188 @@ dotenv.config();
     anchor.workspace.SolanaRandomnessService;
   prettyLog("SolanaRandomnessService", randomnessService.programId, ["env"]);
 
-  const [programStatePubkey, psBump] =
-    anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("STATE")],
-      randomnessService.programId
-    );
-  prettyLog(`ProgramState`, programStatePubkey, ["env"]);
-
   const switchboard = await SwitchboardProgram.fromProvider(provider);
   prettyLog(`Switchboard`, switchboard.attestationProgramId, ["env"]);
 
-  try {
-    const state = await randomnessService.account.state.fetch(
-      programStatePubkey
-    );
-    if (process.env.VERBOSE) {
-      prettyLog(
-        "ProgramState",
-        JSON.stringify(
-          {
-            ...state,
-            costPerByte: state.costPerByte.toNumber(), // BN.js is annoying
-          },
-          undefined,
-          2
-        ),
-        ["rpc"]
-      );
-    }
 
-    console.error(`ERROR: ProgramState has already been initialized!`);
-    process.exit(1);
-  } catch (error) {
-    if (!error.message.includes("Account does not exist")) {
-      throw error;
-    }
-  }
 
-  prettyLog(
-    `Randomness Service's Program State account does not exist, initializing...`,
+
+
+  const program = await switchboard.attestationProgram;
+
+  const switchboardProgram = new SwitchboardProgram(
+    provider,
     undefined,
-    ["info"]
+    undefined,
+    program.programId,
+    undefined,
+    Promise.resolve(program) as Promise<anchor.Program<anchor.Idl>>
   );
 
-  // 1. Use $SWITCHBOARD_SERVICE_PUBKEY if it's set
-  if (process.env.SWITCHBOARD_SERVICE_PUBKEY) {
-    prettyLog(`SwitchboardService`, process.env.SWITCHBOARD_SERVICE_PUBKEY, [
-      "env",
+
+  const [programStatePubkey] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("STATE")],
+    program.programId
+  );
+  console.log(`PROGRAM_STATE: ${programStatePubkey}`);
+
+
+  let attestationQueueAccount = new anchor.web3.PublicKey("CkvizjVnm2zA5Wuwan34NhVT3zFc7vqUyGnA6tuEF5aE")
+
+  let verifierOracleAccount: VerifierAccount | undefined = undefined;
+
+  let serviceWorkerPubkey: anchor.web3.PublicKey | undefined = undefined;
+
+  let [functionAccount] = await FunctionAccount.load(
+    switchboard,
+    new anchor.web3.PublicKey(process.env.SWITCHBOARD_FUNCTION_PUBKEY)
+  )
+  /////////////////////////////////////////
+  // GET OR CREATE CREATE PROGRAM STATE  //
+  /////////////////////////////////////////
+
+
+
+  console.log(`Program state not found, initializing ...`);
+
+
+  /////////////////////////////////////////////
+  // GET OR CREATE CREATE ATTESTATION QUEUE  //
+  /////////////////////////////////////////////
+
+
+  /////////////////////////////////////////////
+  // GET OR CREATE CREATE SERVICE WORKER     //
+  /////////////////////////////////////////////
+  try {
+    if (process.env.SWITCHBOARD_SERVICE_WORKER_KEY) {
+      const serviceWorkerState =
+        await program.account.serviceWorkerAccountData.fetch(
+          new anchor.web3.PublicKey(process.env.SWITCHBOARD_SERVICE_WORKER_KEY)
+        );
+
+      serviceWorkerPubkey = new anchor.web3.PublicKey(
+        process.env.SWITCHBOARD_SERVICE_WORKER_KEY
+      );
+    }
+  } catch { }
+
+  if (true) {
+    console.log(`ServiceWorker not found, initializing ...`);
+    /*
+        const serviceWorkerKeypair = anchor.web3.Keypair.generate();
+    
+        const [rewardEscrowWallet, rewardEscrowTokenWallet] =
+          getSwitchboardWalletPubkeys(
+            program,
+            attestationQueueAccount,
+            payer.publicKey,
+            serviceWorkerKeypair.publicKey
+          );
+    
+        const tx = await program.methods
+          .serviceWorkerInit({
+            region: { unitedKingdom: {} },
+            zone: { south: {} },
+            permissionsRequired: false,
+            availableEnclaveSize: new BN(10 * 1024 * 1024),
+            maxEnclaveSize: new BN(1 * 1024 * 1024),
+            maxCpu: new BN(1),
+            enclaveCost: new BN(0),
+            maxServicesLen: 16,
+          })
+          .accounts({
+            serviceWorker: serviceWorkerKeypair.publicKey,
+            authority: payer.publicKey,
+    
+            attestationQueue: attestationQueueAccount,
+    
+            rewardEscrowWallet: rewardEscrowWallet,
+            rewardEscrowTokenWallet: rewardEscrowTokenWallet,
+            rewardEscrowWalletAuthority: null,
+            mint: switchboardProgram.mint.address,
+    
+            payer: payer.publicKey,
+          })
+          .signers([serviceWorkerKeypair])
+          .rpc(); */
+    let serviceWorkerPubkey = new anchor.web3.PublicKey(process.env.SWITCHBOARD_SERVICE_WORKER_KEY)
+    const serviceWorker =
+      await program.account.serviceWorkerAccountData.fetch(
+        serviceWorkerPubkey///serviceWorkerKeypair.publicKey
+      );
+
+    //serviceWorkerPubkey = serviceWorkerKeypair.publicKey;
+
+    logEnvVariables([
+      ["SWITCHBOARD_SERVICE_WORKER_KEY", serviceWorkerPubkey.toBase58()],
     ]);
 
-    const [serviceAccount, serviceState] = await FunctionServiceAccount.load(
-      switchboard,
-      process.env.SWITCHBOARD_SERVICE_PUBKEY
-    );
+    // console.log(`[TX] serviceWorkerInit: ${tx}`);
 
-    const tx = await randomnessService.methods
-      .initialize(new anchor.BN(1_000))
+    /////////////////////////////////////////////
+    // CREATE SERVICE ACCOUNT                  //
+    /////////////////////////////////////////////
+    let servicePubkey: anchor.web3.PublicKey | undefined = undefined;
+    const serviceKeypair = anchor.web3.Keypair.generate();
+    servicePubkey = serviceKeypair.publicKey;
+    const [defaultSbWallet, escrowTokenWallet] = getSwitchboardWalletPubkeys(
+      program,
+      attestationQueueAccount,
+      payer.publicKey,
+      serviceKeypair.publicKey
+    );
+    const serviceInit = await program.methods
+      .functionServiceInit({
+        name: Buffer.from("Reblancing Service"),
+        metadata: Buffer.from("switchboard rebalacing service"),
+        enclaveSize: new BN(1 * 1024 * 1024),
+        cpu: new BN(1),
+        maxContainerParamsLen: 1024,
+        containerParams: Buffer.from(""),
+      })
       .accounts({
-        state: programStatePubkey,
-        wallet: anchor.utils.token.associatedAddress({
-          mint: nativeMint,
-          owner: programStatePubkey,
-        }),
+        service: servicePubkey,
+        authority: payer.publicKey,
+        function: functionAccount.publicKey,
+        functionAuthority: null,
+        escrowWallet: defaultSbWallet,
+        escrowTokenWallet: escrowTokenWallet,
+        escrowWalletAuthority: null,
         mint: nativeMint,
-        switchboardFunction: serviceState.function,
-        switchboardService: serviceAccount.publicKey,
+        attestationQueue: attestationQueueAccount,
+        payer: payer.publicKey,
+      })
+      .signers([serviceKeypair])
+      .rpc();
+    console.log(`[TX] serviceInit: ${serviceInit}`);
+
+    logEnvVariables([["SWITCHBOARD_SERVICE_KEY", servicePubkey.toBase58()]]);
+
+    const addServiceSignature = await program.methods
+      .functionServiceAddWorker({})
+      .accounts({
+        serviceWorker: serviceWorkerPubkey,
+        service: servicePubkey,
+        function: functionAccount.publicKey,
+        authority: payer.publicKey,
       })
       .rpc();
+    console.log(`[TX] functionServiceAddWorker: ${addServiceSignature}`);
 
-    prettyLog(`initialize`, tx, ["tx"]);
+    // testMeter.print();
 
-    return;
-  }
+    logEnvVariables([
+      [
+        "SWITCHBOARD_ATTESTATION_QUEUE_KEY",
+        attestationQueueAccount.toBase58(),
+      ],
+      ["SWITCHBOARD_VERIFIER_ORACLE_KEY", verifierOracleAccount.publicKey],
 
-  // 2. See if $SWITCHBOARD_FUNCTION_PUBKEY is set and use that to create a new service for ourselves.
-  if (process.env.SWITCHBOARD_FUNCTION_PUBKEY) {
-    prettyLog(`SwitchboardFunction`, process.env.SWITCHBOARD_FUNCTION_PUBKEY, [
-      "env",
+      ["SWITCHBOARD_SERVICE_WORKER_KEY", serviceWorkerPubkey.toBase58()],
+
+      ["SWITCHBOARD_FUNCTION_KEY", functionAccount.publicKey.toBase58()],
+      ["SWITCHBOARD_SERVICE_KEY", servicePubkey.toBase58()],
     ]);
-
-    const [functionAccount] = await FunctionAccount.load(
-      switchboard,
-      process.env.SWITCHBOARD_FUNCTION_PUBKEY
-    );
-
-    // TODO: check if function has servicesEnabled and we are the authority
-
-    const [serviceAccount, tx] = await FunctionServiceAccount.create(
-      switchboard,
-      {
-        functionAccount: functionAccount,
-        name: "Randomness Service",
-        metadata: `Randomness Service - ${randomnessService.programId}`,
-        enclaveSize: 1024,
-      }
-    );
-    prettyLog(`service_init`, tx, ["tx"]);
-    prettyLog(`SwitchboardService`, serviceAccount.publicKey, ["env"]);
-
-    const state = await getOrCreateRandomnessServiceState(
-      randomnessService,
-      serviceAccount.publicKey
-    );
-
-    console.log(`Successully initialized the randomness service`);
-    process.exit(0);
   }
-
-  // 3. Check if $SWITCHBOARD_ATTESTATION_QUEUE_PUBKEY is set
-
-  // 4. Create a brand new environment with Queue, Verifier, Function, Service, & ServiceWorker
-
-  throw new Error(`Failed to initialize the randomness service`);
 })();

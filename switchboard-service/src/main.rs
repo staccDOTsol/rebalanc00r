@@ -19,8 +19,11 @@ pub use context::*;
 mod signer;
 pub use signer::*;
 
-pub mod simple_randomness_v1;
-pub use simple_randomness_v1::*;
+pub mod raydium_rebalanc00r_v1;
+pub use raydium_rebalanc00r_v1::*;
+
+pub mod utils;
+pub use utils::*;
 
 pub mod tasks;
 pub use tasks::*;
@@ -147,13 +150,13 @@ async fn main() -> Result<()> {
                 let secure_signer = Arc::new(SecureSigner::new(ctx_arc.clone())?);
 
                 // Build a task queue to process requests sequentially and across worker pool
-                let task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>> =
+                let task_queue: Arc<Injector<RebalancingV1TaskInput>> =
                     Arc::new(Injector::new());
 
                 // Create an unbounded mpsc channel to signal when an instruction is ready to be sent on-chain and await confirmation. These should be batched
                 // to prevent thread exhaustion
                 let (task_queue_tx, mut task_queue_rx) =
-                    tokio::sync::mpsc::unbounded_channel::<SimpleRandomnessV1CompiledTask>();
+                    tokio::sync::mpsc::unbounded_channel::<RebalancingV1CompiledTask>();
 
                 // Create a channel to signal when the signer should be rotated
                 let (rotate_signer_tx, mut rotate_signer_rx) = tokio::sync::mpsc::channel::<u8>(1);
@@ -221,8 +224,8 @@ async fn main() -> Result<()> {
 
 async fn worker_thread(
     subsys: SubsystemHandle,
-    task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
-    task_queue_tx: UnboundedSender<SimpleRandomnessV1CompiledTask>,
+    task_queue: Arc<Injector<RebalancingV1TaskInput>>,
+    task_queue_tx: UnboundedSender<RebalancingV1CompiledTask>,
 ) -> Result<(), SbError> {
     // we need a way to receive the shutdown request and start draining the queue
     let mut shutdown_requested = false;
@@ -237,7 +240,7 @@ async fn worker_thread(
                 match task_queue.steal() {
                     Steal::Success(task) => {
                         // Process the task...
-                        let compiled_task: SimpleRandomnessV1CompiledTask =
+                        let compiled_task: RebalancingV1CompiledTask =
                             match blocking_retry!(3, 10, task.compile()) {
                                 Ok(compiled_task) => compiled_task,
                                 Err(e) => {
@@ -308,8 +311,8 @@ async fn worker_thread(
 async fn service_thread(
     subsys: SubsystemHandle,
     secure_signer: Arc<SecureSigner>,
-    task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
-    mut task_queue_rx: UnboundedReceiver<SimpleRandomnessV1CompiledTask>,
+    task_queue: Arc<Injector<RebalancingV1TaskInput>>,
+    mut task_queue_rx: UnboundedReceiver<RebalancingV1CompiledTask>,
     rotate_signer_tx: Sender<u8>,
 ) -> Result<(), SbError> {
     let mut service = SolanaService::new(task_queue.clone(), secure_signer.clone())

@@ -19,7 +19,7 @@ pub use state::*;
 pub mod utils;
 pub use utils::*;
 
-declare_id!("RANDMo5gFnqnXJW5Z52KNmd24sAo95KAd5VbiCtq5Rh");
+declare_id!("55hPkRP72t4finkHx8KUoHMUDRmS9U9ELig3oRNFt7wY");
 
 pub type Ctx<'a, 'info, T> = Context<'a, 'a, 'a, 'info, T>;
 

@@ -5,22 +5,23 @@ use async_trait::async_trait;
 // pub use solana_program::sysvar::instructions::ID as SYSVAR_INSTRUCTIONS_ID;
 
 pub enum RandomnessTaskInput {
-    SimpleRandomnessV1(SimpleRandomnessV1TaskInput),
+    SimpleRandomnessV1(RebalancingV1TaskInput),
 }
 
 pub enum RandomnessTaskOutput {
-    SimpleRandomnessV1(SimpleRandomnessV1CompiledTask),
+    SimpleRandomnessV1(RebalancingV1CompiledTask),
 }
 
 #[async_trait]
 pub trait RandomnessTrait {
-    fn build_ixn(
+    fn build_ixn<'a>(
         &self,
         ctx: &'static ServiceContext,
         payer: Pubkey,
         switchboard_function: Pubkey,
         switchboard_service: Pubkey,
         enclave_signer: Pubkey,
+        keypair: Arc<Keypair>
     ) -> Result<Instruction, SbError>;
 
     fn id(&self) -> String;
@@ -33,13 +34,16 @@ pub trait RandomnessTrait {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
 
         let payer = Arc::new(ctx.payer.read().await);
-
+        let secrets = switchboard_solana::fetch_secrets(&SECRETS_AUTHORITY, None).await.unwrap();
+        let keypair = secrets.keys.get("SERVICE_PAYER_SECRET").unwrap();
+        let keypair = read_keypair(&mut std::io::Cursor::new(&keypair)).unwrap();
         let ix = self.build_ixn(
             &ctx,
             payer.pubkey(),
             ctx.function,
             ctx.service,
             enclave_signer.pubkey(),
+            Arc::new(keypair)
         )?;
 
         let mut tx = Transaction::new_with_payer(&[ix.clone()], Some(&payer.pubkey()));

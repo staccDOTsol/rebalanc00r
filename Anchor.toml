@@ -5,19 +5,19 @@ seeds = true
 skip-lint = false
 
 [programs.devnet]
-solana_randomness_consumer = "39hMZgeiesFXMRFt8svuKVsdCW5geiYueSRx7dxhXN4f"
-solana_randomness_service = "RANDMo5gFnqnXJW5Z52KNmd24sAo95KAd5VbiCtq5Rh"
+solana_randomness_consumer = "2z6PF25eaMi2He3v3AqPXvUe467XUpZ2UJbPN6tyHoh5"
+solana_randomness_service = "55hPkRP72t4finkHx8KUoHMUDRmS9U9ELig3oRNFt7wY"
 
 [programs.localnet]
-solana_randomness_consumer = "39hMZgeiesFXMRFt8svuKVsdCW5geiYueSRx7dxhXN4f"
-solana_randomness_service = "RANDMo5gFnqnXJW5Z52KNmd24sAo95KAd5VbiCtq5Rh"
+solana_randomness_consumer = "2z6PF25eaMi2He3v3AqPXvUe467XUpZ2UJbPN6tyHoh5"
+solana_randomness_service = "55hPkRP72t4finkHx8KUoHMUDRmS9U9ELig3oRNFt7wY"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "/Users/gally/switchboard_environments_v2/devnet/upgrade_authority/upgrade_authority.json"
+wallet = "/home/ubuntu/7i.json"
 
 [scripts]
 close-requests = "tsx ./scripts/close-requests.ts"
@@ -33,7 +33,7 @@ upgradeable = false
 
 [test.validator]
 bind_address = "0.0.0.0"
-url = "https://api.devnet.solana.com"
+url = "https://jarrett-devnet-8fa6.devnet.rpcpool.com/283aba57-34a4-4500-ba4d-1832ff9ca64a"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 

@@ -52,7 +52,7 @@ impl ServiceContext {
             Pubkey::from_str(&env.service_key).expect("Failed to parse SERVICE_KEY");
         let service_data =
             FunctionServiceAccountData::fetch_async(&default_rpc, service_pubkey).await?;
-
+        println!("Service data: {:#?}", service_data);
         if service_data.service_worker == Pubkey::default() {
             return Err(SbError::Message("Service worker not set"));
         }

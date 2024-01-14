@@ -32,10 +32,10 @@ interface RandomnessFulfilled {
   anchor.setProvider(
     process.argv.length > 2
       ? new anchor.AnchorProvider(
-          provider.connection,
-          new anchor.Wallet(loadKeypair(process.argv[2])),
-          {}
-        )
+        provider.connection,
+        new anchor.Wallet(loadKeypair(process.argv[2])),
+        {}
+      )
       : provider
   );
 
@@ -126,6 +126,11 @@ interface RandomnessFulfilled {
     };
   }
 
+
+  const [serviceAccount, serviceState] = await FunctionServiceAccount.load(
+    switchboard,
+    process.env.SWITCHBOARD_SERVICE_PUBKEY
+  );
   const request = anchor.web3.Keypair.generate();
 
   const config = { commitment: "confirmed" } as const;
@@ -199,6 +204,86 @@ interface RandomnessFulfilled {
   if (!tx) {
     throw new Error(`Failed to request randomness`);
   }
+
+  const result = Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
+
+  const requestState =
+    await randomnessService.account.simpleRandomnessV1Account.fetch(
+      request.publicKey
+    );
+
+  const [sbServiceAccount, sbServiceState] =
+    await FunctionServiceAccount.load(
+      switchboard,
+      serviceAccount.publicKey
+    );
+  console.log(
+    "enclaveSigner",
+    sbServiceState.enclave.enclaveSigner.toBase58()
+  );
+
+  const remainingAccounts: anchor.web3.AccountMeta[] = [];
+
+  for (const account of requestState.callback.accounts) {
+    if (account.pubkey.equals(request.publicKey)) {
+      continue;
+    }
+    if (account.pubkey.equals(programStatePubkey)) {
+      continue;
+    }
+    if (Boolean(account.isSigner)) {
+      console.log(
+        {
+          pubkey: account.pubkey.toBase58(),
+          isSigner: Boolean(account.isSigner),
+          isWritable: Boolean(account.isWritable),
+        }
+      )
+    }
+    remainingAccounts.push({
+      pubkey: account.pubkey,
+      isSigner: Boolean(account.isSigner),
+      isWritable: Boolean(account.isWritable),
+    });
+  }
+
+  const signature = await randomnessService.methods
+    .simpleRandomnessV1Settle(result)
+    .accounts({
+      user: requestState.user,
+      request: request.publicKey,
+      escrow: anchor.utils.token.associatedAddress({
+        mint: nativeMint,
+        owner: request.publicKey,
+      }),
+      state: programStatePubkey,
+      wallet: anchor.utils.token.associatedAddress({
+        mint: nativeMint,
+        owner: programStatePubkey,
+      }),
+      callbackPid: requestState.callback.programId,
+
+      switchboardFunction: serviceState.function,
+      switchboardService: serviceAccount.publicKey,
+      enclaveSigner: sbServiceState.enclave.enclaveSigner,
+
+      instructionsSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+    })
+    .remainingAccounts(remainingAccounts)
+    .rpc(config)
+    .catch((e) => {
+      console.error(e);
+      throw e;
+    });
+
+  // const signature = await randomnessService.provider
+  //   .sendAndConfirm(tx, undefined, { ...config, skipPreflight: true })
+  //   .catch((e) => {
+  //     console.error(e);
+  //     throw e;
+  //   });
+
+  console.log("[TX] settle", signature);
 
   const [event, slot] = await callbackPromise;
 

@@ -58,13 +58,13 @@ pub struct SolanaService {
     ////////////////////////////////////////
     // Worker
     ////////////////////////////////////////
-    pub task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
+    pub task_queue: Arc<Injector<RebalancingV1TaskInput>>,
 }
 
 impl SolanaService {
     /// Initialize a new Solana oracle with a cache.
     pub async fn new(
-        task_queue: Arc<Injector<SimpleRandomnessV1TaskInput>>,
+        task_queue: Arc<Injector<RebalancingV1TaskInput>>,
         secure_signer: Arc<SecureSigner>,
     ) -> Result<Self, SbError> {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
@@ -142,7 +142,7 @@ impl SolanaService {
     /// Start the Solana oracle and watch the chain for functions to execute.
     pub async fn start(
         &mut self,
-        task_queue_rx: UnboundedReceiver<SimpleRandomnessV1CompiledTask>,
+        task_queue_rx: UnboundedReceiver<RebalancingV1CompiledTask>,
         rotate_signer_tx: Arc<Sender<u8>>,
     ) {
         println!("Starting routines ...");
@@ -212,7 +212,7 @@ impl SolanaService {
     }
 
     async fn process_ix_batch(
-        tasks: Vec<SimpleRandomnessV1CompiledTask>,
+        tasks: Vec<RebalancingV1CompiledTask>,
         secure_signer: Arc<SecureSigner>,
         recent_blockhash: Arc<RwLock<(Hash, u64)>>,
     ) {
@@ -232,7 +232,7 @@ impl SolanaService {
         // Read the recent blockhash
         let recent_blockhash = Arc::new(*recent_blockhash.read().await);
 
-        let batch = SimpleRandomnessV1CompiledTaskBatch {
+        let batch = RebalancingV1CompiledTaskBatch {
             // ctx: ctx.clone(),
             tasks: tasks.clone(),
             enclave_signer: enclave_signer.clone(),
@@ -243,7 +243,7 @@ impl SolanaService {
     }
 
     // Basically just handles batching ixns into groups of 10 so we dont need to keep calling read on RwLocks
-    async fn start_workers(&self, mut tx_queue: UnboundedReceiver<SimpleRandomnessV1CompiledTask>) {
+    async fn start_workers(&self, mut tx_queue: UnboundedReceiver<RebalancingV1CompiledTask>) {
         let ctx: &'static ServiceContext = ServiceContext::get_or_init().await;
 
         let rpc = ctx.rpc.clone();
@@ -251,7 +251,7 @@ impl SolanaService {
         let payer = ctx.payer.clone();
         let recent_blockhash = self.recent_blockhash.clone();
 
-        let mut tasks: Vec<SimpleRandomnessV1CompiledTask> = Vec::with_capacity(10);
+        let mut tasks: Vec<RebalancingV1CompiledTask> = Vec::with_capacity(10);
         let batch_size = 10; // Define your batch size
         let timeout_duration = Duration::from_millis(100); // Adjust as needed
 
@@ -558,10 +558,9 @@ impl SolanaService {
         // }
 
         // Add to Injector queue
-        self.task_queue.push(SimpleRandomnessV1TaskInput {
+        self.task_queue.push(RebalancingV1TaskInput {
             request: event.request,
             user: event.user,
-            num_bytes: event.num_bytes,
             callback: event.callback,
         });
     }
@@ -625,10 +624,9 @@ impl SolanaService {
                     }
                 };
 
-            let task = SimpleRandomnessV1TaskInput {
+            let task = RebalancingV1TaskInput {
                 request: request_pubkey,
                 user: request_state.user,
-                num_bytes: request_state.num_bytes,
                 callback: request_state.callback.into(),
             };
 

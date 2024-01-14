@@ -70,7 +70,7 @@ describe("Solana Randomness Service", () => {
 
       const tx = await randomnessService.methods
         .simpleRandomnessV1(8, {
-          programId: anchor.web3.PublicKey.default,
+          programId: randomnessService.programId,
           accounts: [
             {
               pubkey: programStatePubkey,
@@ -100,12 +100,12 @@ describe("Solana Randomness Service", () => {
 
       // await printLogs(randomnessService.provider.connection, tx);
 
-      // const requestState =
-      //   await randomnessService.account.randomnessRequest.fetch(
-      //     request.publicKey
-      //   );
+      const requestState =
+        await randomnessService.account.simpleRandomnessV1Account.fetch(
+          request.publicKey
+        );
 
-      // console.log(requestState);
+      console.log(requestState);
     });
   });
 
@@ -174,6 +174,15 @@ describe("Solana Randomness Service", () => {
         }
         if (account.pubkey.equals(programStatePubkey)) {
           continue;
+        }
+        if (Boolean(account.isSigner)) {
+          console.log(
+            {
+              pubkey: account.pubkey.toBase58(),
+              isSigner: Boolean(account.isSigner),
+              isWritable: Boolean(account.isWritable),
+            }
+          )
         }
         remainingAccounts.push({
           pubkey: account.pubkey,
