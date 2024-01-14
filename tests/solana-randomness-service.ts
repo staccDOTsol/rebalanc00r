@@ -11,10 +11,7 @@ import type { SolanaRandomnessService } from "../target/types/solana_randomness_
 import type { Program } from "@coral-xyz/anchor";
 import * as anchor from "@coral-xyz/anchor";
 import { BN, sleep } from "@switchboard-xyz/common";
-import type {
-  BootstrappedAttestationQueue,
-  FunctionAccount,
-} from "@switchboard-xyz/solana.js";
+import type { FunctionAccount } from "@switchboard-xyz/solana.js";
 import {
   FunctionServiceAccount,
   type SwitchboardProgram,
@@ -72,7 +69,7 @@ describe("Solana Randomness Service", () => {
       const request = anchor.web3.Keypair.generate();
 
       const tx = await randomnessService.methods
-        .request(8, {
+        .simpleRandomnessV1(8, {
           programId: anchor.web3.PublicKey.default,
           accounts: [
             {
@@ -126,7 +123,7 @@ describe("Solana Randomness Service", () => {
 
       const [event, slot] = await runAndAwaitEvent(
         randomnessService,
-        "RandomnessRequestedEvent",
+        "SimpleRandomnessV1RequestedEvent",
         consumerProgram.methods
           .requestRandomness()
           .accounts({
@@ -155,7 +152,7 @@ describe("Solana Randomness Service", () => {
       const result = Buffer.from(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]));
 
       const requestState =
-        await randomnessService.account.randomnessRequest.fetch(
+        await randomnessService.account.simpleRandomnessV1Account.fetch(
           request.publicKey
         );
 
@@ -186,7 +183,7 @@ describe("Solana Randomness Service", () => {
       }
 
       const signature = await randomnessService.methods
-        .settle(result)
+        .simpleRandomnessV1Settle(result)
         .accounts({
           user: requestState.user,
           request: request.publicKey,
