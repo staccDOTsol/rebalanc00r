@@ -51,10 +51,10 @@ impl CompiledTask {
         info!("User: {}", self.user);
         info!("Escrow: {}", request_escrow);
 
-        let mut ixn = Instruction {
-            program_id: RandomnessServiceID,
-            data: ixn_data,
-            accounts: vec![
+        let mut ixn = Instruction::new_with_bytes(
+            RandomnessServiceID,
+            &ixn_data,
+            vec![
                 // User (mut)
                 AccountMeta::new(self.user, false),
                 // Request (mut)
@@ -80,7 +80,7 @@ impl CompiledTask {
                 // Instructions Sysvar
                 AccountMeta::new_readonly(SYSVAR_INSTRUCTIONS_ID, false),
             ],
-        };
+        );
 
         // Next, add all of the callback accounts
         for account in self.callback.accounts.iter() {
