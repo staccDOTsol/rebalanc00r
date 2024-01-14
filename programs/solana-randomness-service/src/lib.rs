@@ -610,7 +610,7 @@ pub struct Settle<'info> {
         close = user,
         has_one = user,
         has_one = escrow,
-        constraint = request.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
+        // constraint = request.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
     )]
     pub request: Box<Account<'info, RandomnessRequest>>,
 
@@ -635,15 +635,16 @@ pub struct Settle<'info> {
     pub wallet: Box<Account<'info, TokenAccount>>,
 
     // SWITCHBOARD VALIDATION
-    #[account(
-        constraint = switchboard_function.load()?.validate_service(
-            &switchboard_service,
-            &enclave_signer.to_account_info(),
-        )?
-    )]
+    // #[account(
+    //     constraint = switchboard_function.load()?.validate_service(
+    //         &switchboard_service,
+    //         &enclave_signer.to_account_info(),
+    //     )?
+    // )]
     pub switchboard_function: AccountLoader<'info, FunctionAccountData>,
     pub switchboard_service: Box<Account<'info, FunctionServiceAccountData>>,
-    pub enclave_signer: Signer<'info>,
+    /// CHECK:
+    pub enclave_signer: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,

@@ -35,6 +35,9 @@ impl CompiledTask {
         // Then add the vec elements
         ixn_data.append(&mut self.randomness_bytes.clone());
 
+        info!("Ixn Data Len: {}", ixn_data.len());
+        info!("Ixn Data: {:#?}", ixn_data);
+
         let randomness_state_pubkey =
             Pubkey::find_program_address(&[b"STATE"], &RandomnessServiceID).0;
         let randomness_escrow =
