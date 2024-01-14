@@ -89,7 +89,7 @@ pub mod solana_randomness_service {
         mut ctx: Ctx<'_, 'a, SimpleRandomnessV1Settle<'a>>,
         randomness: Vec<u8>,
     ) -> anchor_lang::prelude::Result<()> {
-        SimpleRandomnessV1Settle::actuate(&mut ctx, &randomness)
+        SimpleRandomnessV1Settle::actuate(&mut ctx, randomness)
     }
 
     #[access_control(ctx.accounts.validate(&ctx,  &error_message))]

@@ -81,7 +81,7 @@ impl<'info> SimpleRandomnessV1Settle<'info> {
 
     pub fn actuate(
         ctx: &mut Context<'_, '_, '_, 'info, Self>,
-        randomness: &[u8],
+        randomness: Vec<u8>,
     ) -> anchor_lang::Result<()> {
         // Need to make sure the payer is not included in the callback as a writeable account. Otherwise, the payer could be drained of funds.
         for account in ctx.accounts.request.callback.accounts

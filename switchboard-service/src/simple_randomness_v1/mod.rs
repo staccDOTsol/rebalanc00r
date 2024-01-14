@@ -48,13 +48,22 @@ impl RandomnessTrait for SimpleRandomnessV1CompiledTask {
         switchboard_service: Pubkey,
         enclave_signer: Pubkey,
     ) -> Result<Instruction, SbError> {
-        let ixn_data_len = 8 + 4 + self.randomness_bytes.len();
-        let mut ixn_data: &mut [u8] = &mut vec![0u8; ixn_data_len];
-        ixn_data[0..8].copy_from_slice(&get_ixn_discriminator("simple_randomness_v1_settle"));
-        ixn_data[8..12].copy_from_slice(&(ixn_data_len as u32).to_le_bytes());
-        ixn_data[12..].copy_from_slice(&self.randomness_bytes);
+        // let ixn_data_len = 8 + 4 + self.randomness_bytes.len();
+        // let mut ixn_data: &mut [u8] = &mut vec![0u8; ixn_data_len];
+        // ixn_data[0..8].copy_from_slice(&get_ixn_discriminator("simple_randomness_v1_settle"));
+        // ixn_data[8..12].copy_from_slice(&(ixn_data_len as u32).to_le_bytes());
+        // ixn_data[12..].copy_from_slice(&self.randomness_bytes);
 
-        info!("ixn_data_len: {}", ixn_data.len());
+        let mut ixn_data = get_ixn_discriminator("simple_randomness_v1_settle").to_vec(); // TODO: hardcode this
+        info!("[disc] ixn_data_len: {}", ixn_data.len());
+
+        // First add the length of the vec
+        ixn_data.append(&mut (self.randomness_bytes.len() as u32).to_le_bytes().to_vec());
+        info!("[bytes_len] ixn_data_len: {}", ixn_data.len());
+
+        // Then add the vec elements
+        ixn_data.append(&mut self.randomness_bytes.clone());
+        info!("[bytes] ixn_data_len: {}", ixn_data.len());
 
         let mut ixn = Instruction::new_with_bytes(
             RandomnessServiceID,
