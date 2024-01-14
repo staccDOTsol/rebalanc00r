@@ -14,7 +14,7 @@ pub mod utils;
 pub use utils::*;
 
 pub mod types;
-pub use types::{AccountMetaBorsh, Callback, *};
+pub use types::{AccountMetaBorsh, Callback};
 
 declare_id!("44Drav82v2CBqPoVWR7hEwxZzt4642HR58cjvJKaQP8g");
 
@@ -601,9 +601,9 @@ pub struct Request<'info> {
 /////////////////////////////////////////////////////////////
 #[derive(Accounts)]
 pub struct Settle<'info> {
-    /// The account that pays for the randomness request
+    /// CHECK:
     #[account(mut)]
-    pub payer: Signer<'info>,
+    pub user: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -613,10 +613,6 @@ pub struct Settle<'info> {
         constraint = request.callback.program_id == callback_pid.key() @ RandomnessError::IncorrectCallbackProgramId,
     )]
     pub request: Box<Account<'info, RandomnessRequest>>,
-
-    /// CHECK:
-    #[account(mut)]
-    pub user: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -650,8 +646,11 @@ pub struct Settle<'info> {
     pub enclave_signer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
-
     pub token_program: Program<'info, Token>,
+
+    /// The account that pays for the randomness request
+    #[account(mut)]
+    pub payer: Signer<'info>,
 
     /// CHECK: todo
     pub callback_pid: AccountInfo<'info>,

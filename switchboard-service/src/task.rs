@@ -52,12 +52,10 @@ impl CompiledTask {
             program_id: RandomnessServiceID,
             data: ixn_data,
             accounts: vec![
-                // Payer (mut, signer)
-                AccountMeta::new(payer, true),
-                // Request (mut)
-                AccountMeta::new(self.request, false),
                 // User (mut)
                 AccountMeta::new(self.user, false),
+                // Request (mut)
+                AccountMeta::new(self.request, false),
                 // Request Escrow (mut)
                 AccountMeta::new(request_escrow, false),
                 // State
@@ -72,6 +70,8 @@ impl CompiledTask {
                 AccountMeta::new_readonly(SystemProgramID, false),
                 // TokenProgram
                 AccountMeta::new_readonly(TokenProgramID, false),
+                // Payer (mut, signer)
+                AccountMeta::new(payer, true),
                 // Callback PID
                 AccountMeta::new_readonly(self.callback.program_id, false),
                 // Instructions Sysvar

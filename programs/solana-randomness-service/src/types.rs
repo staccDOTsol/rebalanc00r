@@ -1,4 +1,4 @@
-use crate::*;
+use anchor_lang::prelude::*;
 
 #[derive(Clone, Debug, Default, AnchorSerialize, AnchorDeserialize, InitSpace)]
 pub struct AccountMetaBorsh {

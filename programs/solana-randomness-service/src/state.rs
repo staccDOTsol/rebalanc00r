@@ -1,4 +1,6 @@
-use crate::*;
+use anchor_lang::prelude::*;
+
+use crate::types::{AccountMetaBorsh, Callback};
 
 // TODO: Add a base_mint, base_wallet, and base_cost_per_byte to the program state for wrapped SOL costs. Then other fees can be in a custom mint.
 // TODO: Add the ability to unwrap rewards to fund the hot wallet
@@ -53,13 +55,21 @@ pub struct RandomnessRequest {
 }
 impl RandomnessRequest {
     pub fn space(callback: &Callback) -> usize {
-        // let base: usize = 8  // discriminator
-        //     + solana_program::borsh0_10::get_instance_packed_len(Box::<RandomnessRequest>::default().as_ref()).unwrap();
-        let base = 8 + State::INIT_SPACE;
+        let base: usize = 8  // discriminator
+            + std::mem::size_of::<RandomnessRequest>();
+
+        msg!(
+            "base: {}, ix_data_len: {}, accounts_len: {} * {}",
+            base,
+            callback.ix_data.len(),
+            callback.accounts.len(),
+            std::mem::size_of::<AccountMetaBorsh>()
+        );
 
         base
         + (callback.ix_data.len()) // callback ix data len
-        + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len()) // callback accounts len
-                                                                              // + (512) // error message
+        + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len())
+        // callback accounts len
+        // + (512) // error message
     }
 }
