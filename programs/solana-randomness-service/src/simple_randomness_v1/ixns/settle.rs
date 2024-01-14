@@ -65,7 +65,7 @@ pub struct SimpleRandomnessV1Settle<'info> {
 }
 
 impl<'info> SimpleRandomnessV1Settle<'info> {
-    pub fn validate(&self, ctx: &Context<Self>, randomness: &[u8]) -> anchor_lang::Result<()> {
+    pub fn validate(&self, ctx: &Ctx<Self>, randomness: &[u8]) -> anchor_lang::Result<()> {
         msg!("Checking this ixn is not a CPI call ...");
 
         // Verify this method was not called from a CPI
@@ -79,10 +79,7 @@ impl<'info> SimpleRandomnessV1Settle<'info> {
         Ok(())
     }
 
-    pub fn actuate(
-        ctx: &mut Context<'_, '_, '_, 'info, Self>,
-        randomness: Vec<u8>,
-    ) -> anchor_lang::Result<()> {
+    pub fn actuate(ctx: &mut Ctx<'_, 'info, Self>, randomness: Vec<u8>) -> anchor_lang::Result<()> {
         // Need to make sure the payer is not included in the callback as a writeable account. Otherwise, the payer could be drained of funds.
         for account in ctx.accounts.request.callback.accounts
             [..ctx.accounts.request.callback.accounts.len()]

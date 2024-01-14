@@ -58,7 +58,7 @@ impl RandomnessTrait for SimpleRandomnessV1CompiledTask {
         info!("[disc] ixn_data_len: {}", ixn_data.len());
 
         // First add the length of the vec
-        ixn_data.append(&mut (self.randomness_bytes.len() as u32).to_le_bytes().to_vec());
+        ixn_data.append(&mut (self.randomness_bytes.len() as u32).to_le_bytes()[0..4].to_vec());
         info!("[bytes_len] ixn_data_len: {}", ixn_data.len());
 
         // Then add the vec elements
