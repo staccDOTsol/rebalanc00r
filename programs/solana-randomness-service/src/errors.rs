@@ -19,7 +19,7 @@ pub enum RandomnessError {
     RequestStillActive,
     #[msg("The randomness request has already been completed")]
     RequestAlreadyCompleted,
-    #[msg("The provided error message exceeded 512 bytes")]
+    #[msg("The provided error message exceeded 128 bytes")]
     ErrorMessageOverflow,
     #[msg("The provided callback program_id is incorrect")]
     IncorrectCallbackProgramId,

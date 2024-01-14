@@ -58,7 +58,7 @@ impl<'info> SimpleRandomnessV1CallbackError<'info> {
         // Verify this method was not called from a CPI
         assert_not_cpi_call(&ctx.accounts.instructions_sysvar)?;
 
-        if error_message.len() > 512 {
+        if error_message.len() > 128 {
             return Err(error!(RandomnessError::ErrorMessageOverflow));
         }
 
@@ -88,7 +88,8 @@ impl<'info> SimpleRandomnessV1CallbackError<'info> {
             )?;
         }
 
-        // ctx.accounts.request.error_message = error_message.clone();
+        ctx.accounts.request.error_message = error_message.to_string();
+        ctx.accounts.request.is_completed = 1;
 
         emit!(SimpleRandomnessV1CallbackErrorEvent {
             callback_pid: ctx.accounts.request.callback.program_id,

@@ -12,8 +12,8 @@ pub struct SimpleRandomnessV1Account {
     pub escrow: Pubkey,
     pub request_slot: u64,
     pub callback: Callback,
-    // #[max_len(512)]
-    // pub error_message: String,
+    #[max_len(128)]
+    pub error_message: String,
 }
 impl SimpleRandomnessV1Account {
     pub fn space(callback: &Callback) -> usize {
@@ -31,7 +31,6 @@ impl SimpleRandomnessV1Account {
         base
         + (callback.ix_data.len()) // callback ix data len
         + (std::mem::size_of::<AccountMetaBorsh>() * callback.accounts.len())
-        // callback accounts len
-        // + (512) // error message
+        + 128 // error message
     }
 }

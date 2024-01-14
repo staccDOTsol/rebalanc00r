@@ -593,7 +593,7 @@ impl SolanaService {
                 RpcProgramAccountsConfig {
                     filters: Some(vec![RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
                         0,
-                        SimpleRandomnessV1RequestedEvent::DISCRIMINATOR.to_vec(),
+                        SimpleRandomnessV1Account::DISCRIMINATOR.to_vec(),
                     ))]),
                     account_config: RpcAccountInfoConfig {
                         encoding: Some(UiAccountEncoding::Base64), // TODO: Base64Zstd
