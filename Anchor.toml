@@ -33,7 +33,7 @@ upgradeable = false
 
 [test.validator]
 bind_address = "0.0.0.0"
-url = "https://jarrett-devnet-8fa6.devnet.rpcpool.com/283aba57-34a4-4500-ba4d-1832ff9ca64a"
+url = "https://api.devnet.solana.com"
 ledger = ".anchor/test-ledger"
 rpc_port = 8899
 

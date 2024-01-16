@@ -37,7 +37,7 @@ tracing-subscriber = { version = "0.3.18", features = [
     "json",
     "serde_json",
 ] }
-raydium-amm-v3 = { path = "../raydium-clmm/programs/amm", features = ["client", "no-entrypoint"] }
+raydium-amm-v3 = { path = "../raydium-clmm/programs/amm", features = ["client", "no-entrypoint", "devnet"] }
 spl-associated-token-account = "2.3.0"
 spl-memo = "4.0.0"
 solana-client = "1.17.15"

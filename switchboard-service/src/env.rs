@@ -18,6 +18,8 @@ pub struct SolanaServiceEnvironment {
     pub ipfs_url: String,
     pub ipfs_username: String,
     pub ipfs_password: String,
+    pub rpc_url: String,
+    pub service_payer_secret: String
 }
 impl SolanaServiceEnvironment {
     pub fn parse() -> Result<Self, SbError> {
@@ -48,7 +50,7 @@ impl SolanaServiceEnvironment {
         };
 
         match cluster {
-            Cluster::Devnet => "https://jarrett-devnet-8fa6.devnet.rpcpool.com/283aba57-34a4-4500-ba4d-1832ff9ca64a".to_string(),
+            Cluster::Devnet => "https://api.devnet.solana.com".to_string(),
             Cluster::Mainnet => "https://api.mainnet-beta.solana.com".to_string(),
             Cluster::Localnet => "http:://0.0.0.0:8899".to_string(),
             Cluster::Custom(rpc_url, _) => rpc_url.to_string(),

@@ -74,7 +74,7 @@ impl std::fmt::Display for Cluster {
 impl Cluster {
     pub fn url(&self) -> &str {
         match self {
-            Cluster::Devnet => "https://jarrett-devnet-8fa6.devnet.rpcpool.com/283aba57-34a4-4500-ba4d-1832ff9ca64a",
+            Cluster::Devnet => "https://api.devnet.solana.com",
             Cluster::Testnet => "https://api.testnet.solana.com",
             Cluster::Mainnet => "https://api.mainnet-beta.solana.com",
             Cluster::Localnet => "http://127.0.0.1:8899",

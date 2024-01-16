@@ -46,7 +46,7 @@
 //!     .ok_or_else(|| anyhow!("unable to get config file path"))?;
 //! let mut cli_config = Config::load(&config_file)?;
 //! // Set the RPC URL to devnet
-//! cli_config.json_rpc_url = "https://jarrett-devnet-8fa6.devnet.rpcpool.com/283aba57-34a4-4500-ba4d-1832ff9ca64a".to_string();
+//! cli_config.json_rpc_url = "https://api.devnet.solana.com".to_string();
 //! cli_config.save(&config_file)?;
 //! # Ok::<(), anyhow::Error>(())
 //! ```

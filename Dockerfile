@@ -29,6 +29,12 @@ COPY ./switchboard-service/Cargo.lock ./switchboard-service/Cargo.lock
 COPY ./switchboard-service/src \
      ./switchboard-service/src/
 
+RUN mkdir -p ./raydium-clmm/programs/amm 
+
+COPY ./raydium-clmm/programs/amm/Cargo.toml ./raydium-clmm/programs/amm/Cargo.toml
+COPY ./raydium-clmm/programs/amm/src \
+     ./raydium-clmm/programs/amm/src/
+
 WORKDIR /home/root/switchboard/switchboard-service
 
 RUN --mount=type=cache,target=/root/.cargo/registry \

@@ -36,6 +36,8 @@ const REQUEST_ACCOUNT_DOESNT_EXIST_ERROR_STR: &str = "Program log: AnchorError c
 pub struct ClientConfig {
     http_url: String,
     ws_url: String,
+
+    token_account: Pubkey,
     payer: Arc<Keypair>,
     admin_path: String,
     raydium_v3_program: Pubkey,
@@ -166,14 +168,21 @@ impl RandomnessTrait for RebalancingV1CompiledTask {
         );
         let rsps = rpc_client.get_multiple_accounts(&positions).unwrap();
         let mut user_positions = Vec::new();
+        let mut user_nft_tokens = Vec::new();
+        let mut i = 0;
         for rsp in rsps {
             match rsp {
-                None => continue,
+                None => {
+                    i+=1;
+                    continue;
+                }
                 Some(rsp) => {
                     let position = deserialize_anchor_account::<
                         raydium_amm_v3::states::PersonalPositionState,
                     >(&rsp).unwrap();
                     user_positions.push(position);
+                    user_nft_tokens.push(_nft_tokens[i].key);
+                    i+=1;
                 }
             }
         }
@@ -183,6 +192,7 @@ impl RandomnessTrait for RebalancingV1CompiledTask {
             accounts: vec![],
             data: vec![],
         }];
+        let mut i = 0;
         for position in user_positions {
             let pool = rpc_client.get_account(&position.pool_id);
             let pool = match pool {
@@ -267,6 +277,7 @@ impl RandomnessTrait for RebalancingV1CompiledTask {
                     false,
                 ));
                 let pool_config: ClientConfig = ClientConfig {
+                    token_account: user_nft_tokens[i],
                     http_url: rpc_client.url().to_string(),
                     ws_url: rpc_client.url().to_string().replace("http", "ws"),
                     payer: keypair.clone(),
@@ -281,11 +292,13 @@ impl RandomnessTrait for RebalancingV1CompiledTask {
                     amm_config_index: 0,
                     user: user.clone(),
                 };
+                i += 1;
                 if are_we_profitable {
 
                     ixs = increase_liquidity_instr(
                         &pool_config,
                         pool_config.pool_id_account.unwrap(),
+                        positions[i],
                         pool.token_vault_0,
                         pool.token_vault_1,
                         pool.token_mint_0,
@@ -580,12 +593,12 @@ pub fn open_position_instr(
     with_matedata: bool,
 ) -> Result<Vec<Instruction>> {
     let payer = config.payer.clone();
+    let user: Pubkey = config.user.clone();
     let url = Cluster::Custom(config.http_url.clone(), config.ws_url.clone());
     // Client.
     let client = Client::new(url, Arc::new(payer));
     let program = client.program(config.raydium_v3_program)?;
-    let nft_ata_token_account =
-        spl_associated_token_account::get_associated_token_address(&program.payer(), &nft_mint_key);
+    let nft_ata_token_account = config.token_account.clone();
     let (metadata_account_key, _bump) = Pubkey::find_program_address(
         &[
             b"metadata",
@@ -668,6 +681,7 @@ pub fn open_position_instr(
 pub fn increase_liquidity_instr(
     config: &ClientConfig,
     pool_account_key: Pubkey,
+    personal_position_key: Pubkey,
     token_vault_0: Pubkey,
     token_vault_1: Pubkey,
     token_mint_0: Pubkey,
@@ -690,8 +704,7 @@ pub fn increase_liquidity_instr(
     // Client.
     let client = Client::new(url, Arc::new(payer));
     let program = client.program(config.raydium_v3_program)?;
-    let nft_ata_token_account =
-        spl_associated_token_account::get_associated_token_address(&program.payer(), &nft_mint_key);
+    let nft_ata_token_account = config.token_account.clone();
     let (tick_array_lower, __bump) = Pubkey::find_program_address(
         &[
             TICK_ARRAY_SEED.as_bytes(),
@@ -717,11 +730,6 @@ pub fn increase_liquidity_instr(
         ],
         &config.raydium_v3_program,
     );
-    let (personal_position_key, __bump) = Pubkey::find_program_address(
-        &[POSITION_SEED.as_bytes(), nft_mint_key.to_bytes().as_ref()],
-        &config.raydium_v3_program,
-    );
-
     let instructions = program
         .request()
         .accounts(raydium_accounts::IncreaseLiquidityV2 {
@@ -773,11 +781,11 @@ pub fn decrease_liquidity_instr(
 ) -> Result<Vec<Instruction>> {
     let url = Cluster::Custom(config.http_url.clone(), config.ws_url.clone());
     let payer = config.payer.clone();
+    let user: Pubkey = config.user.clone();
     // Client.
     let client = Client::new(url, Arc::new(payer));
     let program = client.program(config.raydium_v3_program)?;
-    let nft_ata_token_account =
-        spl_associated_token_account::get_associated_token_address(&program.payer(), &nft_mint_key);
+    let nft_ata_token_account = config.token_account.clone();
     let (personal_position_key, __bump) = Pubkey::find_program_address(
         &[POSITION_SEED.as_bytes(), nft_mint_key.to_bytes().as_ref()],
         &config.raydium_v3_program,

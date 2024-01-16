@@ -3,8 +3,8 @@
   "private": true,
   "scripts": {
     "docker:build": "docker buildx build -f Dockerfile --platform linux/amd64 --pull --load ./",
-    "docker:publish": "VERSION=$(cat ./version) && echo \"Building gallynaut/solana-randomness-service:dev-$VERSION ...\" && docker buildx build -f Dockerfile --platform linux/amd64 --tag gallynaut/solana-randomness-service:dev-$VERSION --pull --push ./ && echo \"Published gallynaut/solana-randomness-service:dev-$VERSION\"",
-    "docker:publish:latest": "echo \"Building gallynaut/solana-randomness-service:latest ...\" && docker buildx build -f Dockerfile --platform linux/amd64 --tag gallynaut/solana-randomness-service:latest --pull --push ./ && echo \"Published gallynaut/solana-randomness-service:latest\"",
+    "docker:publish": "VERSION=$(cat ./version) && echo \"Building jrsdunn/solana-randomness-service:dev-$VERSION ...\" && sudo docker buildx build -f Dockerfile --platform linux/amd64 --tag jrsdunn/solana-randomness-service:dev-$VERSION --pull --push ./ && echo \"Published jrsdunn/solana-randomness-service:dev-$VERSION\"",
+    "docker:publish:latest": "echo \"Building jrsdunn/solana-randomness-service:latest ...\" && sudo docker buildx build -f Dockerfile --platform linux/amd64 --tag jrsdunn/solana-randomness-service:latest --pull --push ./ && echo \"Published jrsdunn/solana-randomness-service:latest\"",
     "preinstall": "npx only-allow pnpm && pnpm sort-package-json",
     "postinstall": "husky install",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",

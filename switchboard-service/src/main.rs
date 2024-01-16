@@ -119,7 +119,7 @@ pub use serde::Deserialize;
 // * Mapping of container id to expected container configuration
 
 // TODO: Maybe this should be fetched by service authority?
-pub const SECRETS_AUTHORITY: &str = "FiDmUK83DTc1ijEyVnwMoQwJ6W4gC2S8JhncKsheDQTJ";
+pub const SECRETS_AUTHORITY: &str = "7ihN8QaTfNoDTRTQGULCzbUT3PHwPDTu5Brcu4iT2paP";
 
 #[tokio::main]
 async fn main() -> Result<()> {

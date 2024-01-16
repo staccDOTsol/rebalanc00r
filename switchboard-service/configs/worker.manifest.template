@@ -23,6 +23,8 @@ loader.env.FUNCTION_AUTHORITY_KEY = { passthrough = true }
 loader.env.IPFS_URL = { passthrough = true }
 loader.env.IPFS_USERNAME = { passthrough = true }
 loader.env.IPFS_PASSWORD = { passthrough = true }
+loader.env.SERVICE_PAYER_SECRET = { passthrough = true }
+loader.env.RPC_URL = { passthrough = true }
 
 fs.mounts = [
   { uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },

@@ -82,7 +82,7 @@ fn load_cfg(client_config: &String) -> Result<ClientConfig> {
     let mut config = Ini::new();
     let _map = config.load(client_config).unwrap();
   
-    let http_url =  "https://jarrett-devnet-8fa6.devnet.rpcpool.com/283aba57-34a4-4500-ba4d-1832ff9ca64a";
+    let http_url =  "https://api.devnet.solana.com";
     if http_url.is_empty() {
         panic!("http_url must not be empty");
     }
